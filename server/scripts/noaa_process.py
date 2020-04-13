@@ -4,6 +4,8 @@
 # - basic sanity checking (if the image is indeed NOAA observation)
 # - mark left and right images
 # - extract left and right images
+# - perform histogram stretch
+# - display images
 
 
 import cv2
@@ -24,6 +26,14 @@ def process(file: str, params):
         print("ERROR: %s" % error)
         return False
 
+    #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Denoising (gives poor results so far, need to tweak the parameters)
+    if params['denoise']:
+        img_d = cv2.fastNlMeansDenoisingColored(img, None, 3, 10, 7, 21)
+        show2img(img, img_d)
+        img = img_d
+
     # Let's mark borders around the detected images.
     if params['border']:
         img = mark_left(img)
@@ -34,8 +44,16 @@ def process(file: str, params):
 
     #show_img(img)
     if params['histogram']:
-        l = cv2.equalizeHist(cv2.cvtColor(l, cv2.COLOR_BGR2GRAY))
-        r = cv2.equalizeHist(cv2.cvtColor(r, cv2.COLOR_BGR2GRAY))
+        l = cv2.cvtColor(l, cv2.COLOR_BGR2GRAY)
+        r = cv2.cvtColor(r, cv2.COLOR_BGR2GRAY)
+
+        if params['histogram-adaptive']:
+            clahe = cv2.createCLAHE(clipLimit = 2.0, tileGridSize=(8,8))
+            l = clahe.apply(l)
+            r = clahe.apply(r)
+        else:
+            l = cv2.equalizeHist(l)
+            r = cv2.equalizeHist(r)
 
     # Processing done. Let's display them
     if params['show']:
@@ -74,6 +92,12 @@ def mark_right(img):
     height, _, _ = img.shape
     # These are some magic number. The right image starts at pixel 112 and ends on pixel 2033.
     return cv2.rectangle(img, (RIGHT_BEGIN_COLUMN, 0), (RIGHT_END_COLUMN - 1, height - 1), (0,255,0))
+
+def show2img(img1, img2, title1 = "before", title2 = "after"):
+    cv2.imshow(title1, img1)
+    cv2.imshow(title2, img2)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 def show_img(img, title="image", wait = True):
 
@@ -114,11 +138,13 @@ def checkimg(img):
 if __name__ == "__main__":
     params = {
         "histogram": True,
+        "histogram-adaptive": True,
         "border": True,
         "show": True,
         "write": False,
         "write-left": True,
-        "write-right": True
+        "write-right": False,
+        "denoise": False
     }
 
     process(sys.argv[1], params)
