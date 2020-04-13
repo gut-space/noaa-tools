@@ -10,8 +10,15 @@ import cv2
 import sys
 from matplotlib import pyplot as plt
 
+LEFT_BEGIN_COLUMN = 84
+LEFT_END_COLUMN = 993
+
+RIGHT_BEGIN_COLUMN = 1124
+RIGHT_END_COLUMN = 2033
+
 def show(file: str):
     img = cv2.imread(file)
+
     ok, error = checkimg(img)
     if not ok:
         print("ERROR: %s" % error)
@@ -21,25 +28,34 @@ def show(file: str):
     img = mark_right(img)
     l = extract_left(img)
     r = extract_right(img)
-    show_img(img)
-    show_img(l)
-    show_img(r)
+    #show_img(img)
+    #show_img(l)
+    #show_img(r)
+
+    fname = file.split('.')
+    fname = '.'.join(fname[:-1])
+
+    cv2.imwrite(fname + '-annot.png', img)
+
+    cv2.imwrite(fname + '-left.png', l)
+    cv2.imwrite(fname + '-right.png', r)
+    print("fname=[%s]" % fname)
+
     return True
 
 def mark_left(img):
     # width and number of channels are ignored.
-    _, height, _ = img.shape
+    height, _, _ = img.shape
 
+    print("#height=%s" % height)
     # These are some magic number. The left image starts at pixel 28 and ends on pixel 992.
-    return cv2.rectangle(img, (84, 0), (992, height), (255,0,0) )
+    return cv2.rectangle(img, (LEFT_BEGIN_COLUMN, 0), (LEFT_END_COLUMN - 1, height - 1), (255,0,0) )
 
 def mark_right(img):
 
-    _, height, _ = img.shape
+    height, _, _ = img.shape
     # These are some magic number. The right image starts at pixel 112 and ends on pixel 2033.
-    return cv2.rectangle(img, (1124, 0), (2033, height), (0,255,0))
-
-    return img
+    return cv2.rectangle(img, (RIGHT_BEGIN_COLUMN, 0), (RIGHT_END_COLUMN - 1, height - 1), (0,255,0))
 
 def show_img(image):
     plt.imshow(image, cmap = 'gray', interpolation = 'bicubic')
@@ -51,14 +67,14 @@ def show_img(image):
 
 def extract_left(img):
     _, height, _ = img.shape
-    return img[0:height, 84:992]
+    return img[0:height-1, LEFT_BEGIN_COLUMN:LEFT_END_COLUMN]
 
 def extract_right(img):
     _, height, _ = img.shape
-    return img[0:height, 1124:2033]
+    return img[0:height-1, RIGHT_BEGIN_COLUMN:RIGHT_END_COLUMN]
 
 def checkimg(img):
-    height, width, channels = img.shape
+    height, width, _ = img.shape
     # Check if this looks like NOAA image at all.
 
     # Check 1: verify it has width of 2080 pixels
