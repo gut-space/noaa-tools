@@ -16,7 +16,7 @@ LEFT_END_COLUMN = 993
 RIGHT_BEGIN_COLUMN = 1124
 RIGHT_END_COLUMN = 2033
 
-def show(file: str):
+def process(file: str, params):
     img = cv2.imread(file)
 
     ok, error = checkimg(img)
@@ -24,22 +24,40 @@ def show(file: str):
         print("ERROR: %s" % error)
         return False
 
-    img = mark_left(img)
-    img = mark_right(img)
+    # Let's mark borders around the detected images.
+    if params['border']:
+        img = mark_left(img)
+        img = mark_right(img)
+
     l = extract_left(img)
     r = extract_right(img)
-    #show_img(img)
-    #show_img(l)
-    #show_img(r)
 
+    #show_img(img)
+    if params['histogram']:
+        l = cv2.equalizeHist(cv2.cvtColor(l, cv2.COLOR_BGR2GRAY))
+        r = cv2.equalizeHist(cv2.cvtColor(r, cv2.COLOR_BGR2GRAY))
+
+    # Processing done. Let's display them
+    if params['show']:
+        if params['write-left']:
+            show_img(l, title="left", wait=False)
+        if params['write-right']:
+            show_img(r, title="right", wait=False)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    # Time to write output files.
     fname = file.split('.')
     fname = '.'.join(fname[:-1])
 
-    cv2.imwrite(fname + '-annot.png', img)
+    if params['write']:
+        cv2.imwrite(fname + '-annot.png', img)
 
-    cv2.imwrite(fname + '-left.png', l)
-    cv2.imwrite(fname + '-right.png', r)
-    print("fname=[%s]" % fname)
+    if params['write-left']:
+        cv2.imwrite(fname + '-left.png', l)
+
+    if params['write-right']:
+        cv2.imwrite(fname + '-right.png', r)
 
     return True
 
@@ -57,13 +75,20 @@ def mark_right(img):
     # These are some magic number. The right image starts at pixel 112 and ends on pixel 2033.
     return cv2.rectangle(img, (RIGHT_BEGIN_COLUMN, 0), (RIGHT_END_COLUMN - 1, height - 1), (0,255,0))
 
-def show_img(image):
-    plt.imshow(image, cmap = 'gray', interpolation = 'bicubic')
+def show_img(img, title="image", wait = True):
+
+    # Let's use simple showing using cv2
+    cv2.imshow(title, img)
+    if wait:
+        cv2.waitKey(0)
+
+    # The alternative is to use pyplot from mathplotlib
+    #plt.imshow(image, cmap = 'gray', interpolation = 'bicubic')
     #Uncomment this to hide X, Y axis values
     #plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
 
     #plt.plot([200,300,400],[200,200,300],'c', linewidth=5)
-    plt.show()
+    #plt.show()
 
 def extract_left(img):
     _, height, _ = img.shape
@@ -87,4 +112,13 @@ def checkimg(img):
     return True, ""
 
 if __name__ == "__main__":
-    show(sys.argv[1])
+    params = {
+        "histogram": True,
+        "border": True,
+        "show": True,
+        "write": False,
+        "write-left": True,
+        "write-right": True
+    }
+
+    process(sys.argv[1], params)
