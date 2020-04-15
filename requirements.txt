@@ -11,4 +11,5 @@ numpy==1.18.2             # via matplotlib, opencv-python
 opencv-python==4.2.0.34   # via -r requirements.in
 pyparsing==2.4.7          # via matplotlib
 python-dateutil==2.8.1    # via matplotlib
+sgp4==2.5                 # via -r requirements.in
 six==1.14.0               # via cycler, python-dateutil

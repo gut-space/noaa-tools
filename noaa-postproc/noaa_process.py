@@ -1,4 +1,7 @@
 # This script processes images received from NOAA satellites
+USAGE = '''
+#
+# noaa_process script
 #
 # Current capabilities:
 # - basic sanity checking (if the image is indeed NOAA observation)
@@ -6,11 +9,24 @@
 # - extract left and right images
 # - perform histogram stretch
 # - display images
-
+#
+# Usage:
+# python noaa_process.py filename.png tle.txt AOS LOS
+#
+# filename.png - this is a file that's decoded with noaa-apt
+# tle.txt - TLE information of the orbit
+# aos - aquisition of signal
+# los - loss of signal
+'''
 
 import cv2
 import sys
+from datetime import datetime, timezone
 from matplotlib import pyplot as plt
+
+from sgp4.io import twoline2rv
+from sgp4.earth_gravity import wgs72, wgs84
+from sgp4.api import jday, Satrec
 
 LEFT_BEGIN_COLUMN = 84
 LEFT_END_COLUMN = 993
@@ -132,8 +148,42 @@ def checkimg(img):
     if width != 2080:
         return False, "Image has incorrect width: %d, expected 2080 pixels" % width
 
-
     return True, ""
+
+def georef_naive(tle1, tle2, aos, los):
+    """ This is a naive georeferencing method:
+        - calculates the sat location at AOS and LOS points (using )
+    then calculates distance between them. """
+
+    d1 = datetime.fromisoformat(aos).replace(tzinfo=timezone.utc)
+    d2 = datetime.fromisoformat(los).replace(tzinfo=timezone.utc)
+
+    # STEP 1: Calculate sat location at AOS and LOS
+
+    # This approach uses old API 1.x
+    sat_old = twoline2rv(tle1, tle2, wgs72)
+    pos1_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
+    pos2_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
+
+    # This approach uses new API 2.x which gives a slightly different results.
+    # In case of NOAA, the position is off by less than milimeter
+    sat = Satrec.twoline2rv(tle1, tle2)
+    jd1, fr1 = jday(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
+    jd2, fr2 = jday(d2.year, d2.month, d2.day, d2.hour, d2.minute, d2.second)
+    _, pos1, _ = sat.sgp4(jd1, fr1) # returns error, position and velocity - we care about position only
+    _, pos2, _ = sat.sgp4(jd2, fr2)
+
+    # STEP 2: Calculate sub-satellite point at AOS, LOS times
+    # T.S. Kelso saves the day *again*: see here: https://celestrak.com/columns/v02n03/
+
+    # STEP 3: Calculate the radial distance between AOS SSP and LOS SSP, divide is by image height. The result will be
+    # angular resolution per pixel. Now multiply the value by image width/2 and then add/subtract from the AOS/LOS SSP
+    # to get corners of the image.
+
+    # STEP 4: Export georeferencing data.
+
+def usage():
+    print(USAGE)
 
 if __name__ == "__main__":
     params = {
@@ -144,7 +194,20 @@ if __name__ == "__main__":
         "write": False,
         "write-left": True,
         "write-right": False,
-        "denoise": False
+        "denoise": False,
+        "georef": True # Georeference
     }
 
-    process(sys.argv[1], params)
+    if len(sys.argv) < 5:
+        usage()
+        sys.exit(-1)
+
+    #process(sys.argv[1], params)
+
+    tle1 = '1 28654U 05018A   20098.54037539  .00000075  00000-0  65128-4 0  9992'
+    tle2 = '2 28654  99.0522 154.2797 0015184  73.2195 287.0641 14.12501077766909'
+
+    aos = '2020-04-12 09:01:03.063476'
+    los = '2020-04-12 09:17:06.466954'
+
+    georef_naive(tle1, tle2, aos, los)
