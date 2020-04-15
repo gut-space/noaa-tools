@@ -1,7 +1,4 @@
-The goal of this project is to build a fully functional satellite ground station, based on [satnogs](https://satnogs.org) project.
+This is a python module for post-processing images received from NOAA satellites. In particular, this
+module will attempt to georeference the images.
 
-We will see how it goes next.
-
-Project founders:
-@slawek
-@thomson
+Author: @tomaszmrugalski
