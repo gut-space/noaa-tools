@@ -314,3 +314,14 @@ if __name__ == "__main__":
     los = '2020-04-12 09:17:06.466954'
 
     georef_naive(tle1, tle2, aos, los)
+
+
+# NOTES: If the above doesn't work, the next thing to try will be this:
+# https://github.com/geospace-code/pymap3d, especially eci2geodetic
+
+# This one is interesting.
+# https://en.wikipedia.org/wiki/Geographic_coordinate_conversion#From_ECEF_to_geodetic_coordinates
+
+
+# This one has almost complete solution using Skyfield
+# https://space.stackexchange.com/questions/19339/better-way-to-get-approximate-ground-track-for-a-satellite-using-skyfield/40218#40218
