@@ -23,6 +23,8 @@ import cv2
 import sys
 from datetime import datetime, timezone
 from matplotlib import pyplot as plt
+from collections import namedtuple
+from math import atan, atan2, sqrt, pi
 
 from sgp4.io import twoline2rv
 from sgp4.earth_gravity import wgs72, wgs84
@@ -33,6 +35,13 @@ LEFT_END_COLUMN = 993
 
 RIGHT_BEGIN_COLUMN = 1124
 RIGHT_END_COLUMN = 2033
+
+# This defines ellipsoid (a = equatorial radius in km, finv = inverse flattening)
+Ellipsoid = namedtuple('Ellipsoid', "a finv")
+
+# Source: https://en.wikipedia.org/wiki/Earth_ellipsoid#Historical_Earth_ellipsoids
+elipsoid_wgs84 = Ellipsoid(a = 6378.137, finv = 298.257223563)
+
 
 def process(file: str, params):
     img = cv2.imread(file)
@@ -150,6 +159,91 @@ def checkimg(img):
 
     return True, ""
 
+
+#######################################################################################################
+# Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
+# Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
+
+def julianDateToGMST(jd, fr):
+    """
+    Converts Julian date (expressed at two floats) to GMST (Greenwich Mean Sidereal Time).
+
+    Parameters:
+    jd : float - Julian date full integer + 0.5
+    fr : float - fractional part of the Julian date
+
+    Returns
+    =======
+    A single floating point representing a GMST, expressed in degrees (0...359.99999).
+
+    This calculation takes into consideration the precession, but not nutation.
+
+    Source: https://www.cv.nrao.edu/~rfisher/Ephemerides/times.html#GMST
+    """
+
+    # First calculate number of days since J2000 (2000-Jan-01 12h UT1)
+    d = jd - 2451545.0
+    d = d + fr
+
+    # Now convert this to centuries. Don't ask me why.
+    T = d / 36525
+
+    # Calculate GMST (in seconds at UT1=0)
+    gmst = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T*T*T
+
+    # Let's truncate this
+    return (gmst % 24)*(15/3600.0)
+
+def temeToGeodetic_spherical(x, y, z, jd, fr):
+    """
+    Converts ECI coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).
+    This function assumes the Earth is completely round.
+
+    The calculations here are based on T.S. Kelso's excellent paper "Orbital Coordinate Systems, Part III
+    https://celestrak.com/columns/v02n03/.
+
+    Parameters
+    ==========
+    x,y,z : float - coordates in TEME (True Equator Mean Equinoex) version of ECI (Earth Centered Intertial) coords system.
+            This is the system that's produced by SGP4 models.
+    jd, fr : float - julian date - expressed as two floats that should be summed together.
+    """
+
+    gmst = julianDateToGMST(jd, fr)
+
+    lat = atan2(z, sqrt(x*x + y*y))
+    lon = atan2(y, x) - gmst
+    alt = sqrt(x*x + y*y + z*z) - 6378.137
+
+    return lat, lon, alt
+
+def temeToGeodetic(x, y, z, ellipsoid, jd, fr):
+    """
+    Converts ECEF coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).
+    ellipsoid is Earth ellipsoid to be used (e.g. ellipsoid_wgs84).
+
+    The calculations here are based on T.S. Kelso's excellent paper "Orbital Coordinate Systems, Part III
+    https://celestrak.com/columns/v02n03/.
+
+    Parameters
+    ==========
+    x,y,z : float - coordates in TEME (True Equator Mean Equinoex) version of ECI (Earth Centered Intertial) coords system.
+            This is the system that's produced by SGP4 models.
+    ellipsoid: Ellipsoid - an Earth exlipsoid specifying Earth oblateness, e.g. Ellipsoid_wgs84. Two params are used from it:
+            a and inverse of f. Both must be specified in kms
+    jd, fr : float - julian date - expressed as two floats that should be summed together.
+    """
+
+    # First, we need to do some basic calculations for Earth oblateness
+    a  = ellipsoid.a
+    f  = 1.0/ellipsoid.finv
+    b  = a*(1 - 1.0/f)
+    e2 = f*(2-f)
+
+    gmst = julianDateToGMST(jd, fr)
+
+    raise NotImplementedError("Need to complete this")
+
 def georef_naive(tle1, tle2, aos, los):
     """ This is a naive georeferencing method:
         - calculates the sat location at AOS and LOS points (using )
@@ -172,6 +266,15 @@ def georef_naive(tle1, tle2, aos, los):
     jd2, fr2 = jday(d2.year, d2.month, d2.day, d2.hour, d2.minute, d2.second)
     _, pos1, _ = sat.sgp4(jd1, fr1) # returns error, position and velocity - we care about position only
     _, pos2, _ = sat.sgp4(jd2, fr2)
+
+    # Ok, we have sat position at time of AOS and LOS. The tricky part here is those are in
+    # Earth-Centered Intertial (ECI) reference system. The model used is TEME (True equator,
+    # mean equinox).
+
+    lla1 = temeToGeodetic_spherical(pos1[0], pos1[1], pos1[2], jd1, fr1)
+    print("ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
+    (pos1[0], pos1[1], pos1[2], lla1[0]*180/pi, lla1[1]*180/pi, lla1[2]))
+
 
     # STEP 2: Calculate sub-satellite point at AOS, LOS times
     # T.S. Kelso saves the day *again*: see here: https://celestrak.com/columns/v02n03/
