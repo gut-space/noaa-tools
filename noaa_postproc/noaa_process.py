@@ -24,7 +24,7 @@ import sys
 from datetime import datetime, timezone
 from matplotlib import pyplot as plt
 from collections import namedtuple
-from math import atan, atan2, sqrt, pi
+from math import atan, atan2, sqrt, pi, sin, cos
 
 from sgp4.io import twoline2rv
 from sgp4.earth_gravity import wgs72, wgs84
@@ -40,7 +40,7 @@ RIGHT_END_COLUMN = 2033
 Ellipsoid = namedtuple('Ellipsoid', "a finv")
 
 # Source: https://en.wikipedia.org/wiki/Earth_ellipsoid#Historical_Earth_ellipsoids
-elipsoid_wgs84 = Ellipsoid(a = 6378.137, finv = 298.257223563)
+ellipsoid_wgs84 = Ellipsoid(a = 6378.137, finv = 298.257223563)
 
 
 def process(file: str, params):
@@ -191,7 +191,7 @@ def julianDateToGMST(jd, fr):
     # Calculate GMST (in seconds at UT1=0)
     gmst = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T*T*T
 
-    # Let's truncate this
+    # Let's truncate this and return the value in degrees.
     return (gmst % 24)*(15/3600.0)
 
 def temeToGeodetic_spherical(x, y, z, jd, fr):
@@ -211,9 +211,11 @@ def temeToGeodetic_spherical(x, y, z, jd, fr):
 
     gmst = julianDateToGMST(jd, fr)
 
-    lat = atan2(z, sqrt(x*x + y*y))
-    lon = atan2(y, x) - gmst
-    alt = sqrt(x*x + y*y + z*z) - 6378.137
+    RE = 6378.137 # Earth radius (in km)
+
+    lat = atan2(z, sqrt(x*x + y*y)) # phi
+    lon = atan2(y, x) - gmst # lambda-E
+    alt = sqrt(x*x + y*y + z*z) - RE # h
 
     return lat, lon, alt
 
@@ -240,9 +242,26 @@ def temeToGeodetic(x, y, z, ellipsoid, jd, fr):
     b  = a*(1 - 1.0/f)
     e2 = f*(2-f)
 
+    phii = 1 # This is the starting value for initial iteration
+
+    # There should be a check on |phii - phi| value, but let's always do 4 iterations. Good enough for now.
+    for iter in range(1,5):
+
+        C = 1/(sqrt(1-e2*pow(sin(phii), 2)))
+        # This is not explicitly stated on clestrak page, but it's shown on a diagram.
+        R = sqrt(x*x + y*y)
+        phi = atan2(z + a*C*e2*sin(phii), R)
+        h= R/(cos(phi)) - a*C
+
+        # print("iter=%d, phi=%f, phii=%f, |phi-phii|=%f" % (iter, phi, phii, abs(phi-phii)))
+
+        phii=phi
+
     gmst = julianDateToGMST(jd, fr)
 
-    raise NotImplementedError("Need to complete this")
+    lon = atan2(y, x) - gmst # lambda-E
+
+    return phi, lon, h
 
 def georef_naive(tle1, tle2, aos, los):
     """ This is a naive georeferencing method:
@@ -252,32 +271,56 @@ def georef_naive(tle1, tle2, aos, los):
     d1 = datetime.fromisoformat(aos).replace(tzinfo=timezone.utc)
     d2 = datetime.fromisoformat(los).replace(tzinfo=timezone.utc)
 
+    # Sat image aquisition and image transmission is not instanteneous. There is some delay. It's small, but
+    # bacause the sat moves at speeds of more than 7km/s, even fractions of second make a big deal of a difference.
+    # Not sure if this data is available anywhere. I think it'll have to be picked with trial-and-error.
+    # This is expressed in seconds.
+    delay = 0.5
+
     # STEP 1: Calculate sat location at AOS and LOS
 
     # This approach uses old API 1.x
-    sat_old = twoline2rv(tle1, tle2, wgs72)
-    pos1_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
-    pos2_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
+    #sat_old = twoline2rv(tle1, tle2, wgs72)
+    #pos1_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
+    #pos2_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
 
     # This approach uses new API 2.x which gives a slightly different results.
     # In case of NOAA, the position is off by less than milimeter
     sat = Satrec.twoline2rv(tle1, tle2)
     jd1, fr1 = jday(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
     jd2, fr2 = jday(d2.year, d2.month, d2.day, d2.hour, d2.minute, d2.second)
+    fr1 += delay/86400.0 # Take sat processing/transmission delay into consideration
+    fr2 += delay/86400.0
+
     _, pos1, _ = sat.sgp4(jd1, fr1) # returns error, position and velocity - we care about position only
     _, pos2, _ = sat.sgp4(jd2, fr2)
 
-    # Ok, we have sat position at time of AOS and LOS. The tricky part here is those are in
-    # Earth-Centered Intertial (ECI) reference system. The model used is TEME (True equator,
-    # mean equinox).
-
-    lla1 = temeToGeodetic_spherical(pos1[0], pos1[1], pos1[2], jd1, fr1)
-    print("ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos1[0], pos1[1], pos1[2], lla1[0]*180/pi, lla1[1]*180/pi, lla1[2]))
-
-
     # STEP 2: Calculate sub-satellite point at AOS, LOS times
     # T.S. Kelso saves the day *again*: see here: https://celestrak.com/columns/v02n03/
+
+    # Ok, we have sat position at time of AOS and LOS. The tricky part here is those are in
+    # Earth-Centered Intertial (ECI) reference system. The model used is TEME (True equator,
+    # mean equinox). Let's calculate the SSP using two methods:
+    # - simple (that assumes spherical Earth)
+    # - oblate Earth (uses passed ellipsoid, WGS84 in this case)
+
+    print("METHOD 1 (spherical Earth)")
+    lla1 = temeToGeodetic_spherical(pos1[0], pos1[1], pos1[2], jd1, fr1)
+    print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
+    (pos1[0], pos1[1], pos1[2], lla1[0]*180/pi, lla1[1]*180/pi, lla1[2]))
+
+    lla2 = temeToGeodetic_spherical(pos2[0], pos2[1], pos2[2], jd2, fr2)
+    print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
+    (pos2[0], pos2[1], pos2[2], lla2[0]*180/pi, lla2[1]*180/pi, lla2[2]))
+
+    print("METHOD 2 (oblate Earth)")
+    lla1 = temeToGeodetic(pos1[0], pos1[1], pos1[2], ellipsoid_wgs84, jd1, fr1)
+    print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
+    (pos1[0], pos1[1], pos1[2], lla1[0]*180/pi, lla1[1]*180/pi, lla1[2]))
+
+    lla2 = temeToGeodetic(pos2[0], pos2[1], pos2[2], ellipsoid_wgs84, jd2, fr2)
+    print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
+    (pos2[0], pos2[1], pos2[2], lla2[0]*180/pi, lla2[1]*180/pi, lla2[2]))
 
     # STEP 3: Calculate the radial distance between AOS SSP and LOS SSP, divide is by image height. The result will be
     # angular resolution per pixel. Now multiply the value by image width/2 and then add/subtract from the AOS/LOS SSP
