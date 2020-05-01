@@ -1,4 +1,4 @@
-from noaa_postproc.imageproc import process_img
+from noaatools.imageproc import process_img
 import unittest
 import pytest
 
@@ -17,6 +17,6 @@ class Georefests(unittest.TestCase):
             "georef": True # Georeference
         }
 
-        process_img("1276.png", params)
+        process_img("tests/1276.png", params)
 
         #self.assertIs()

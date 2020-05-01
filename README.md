@@ -19,7 +19,7 @@ to be done with the image. Here's a minimal code that does image extraction and 
 
 ```python
 
-from noaa_postproc.imageproc import process_img
+from noaatools.imageproc import process_img
 params = {
     "histogram": True,
     "histogram-adaptive": True,
