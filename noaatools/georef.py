@@ -158,6 +158,14 @@ def teme2geodetic_oblate(x, y, z, t, ellipsoid):
     return phi*180/pi, lon*180/pi, h
 
 def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
+    """
+    Converts TEME coordinates to geodetic, using pymap3d library.
+    For details, see https://github.com/geospace-code/pymap3d
+
+    Returns
+    =======
+    lat, lon, alt - latitude, longitude (both in degrees), alt (in km)
+    """
 
     xecef, yecef, zecef = ecef.eci2ecef(np.array([x*1000]), np.array([y*1000]), np.array([z*1000]), t)
 
@@ -180,14 +188,14 @@ def export2cesium_point(lla, name):
 
     code = """
     var questionPin = viewer.entities.add({
-        name : 'Question mark',
+        name : '%s',
         position : Cesium.Cartesian3.fromDegrees(%f, %f, %f),
         billboard : {
             image : pinBuilder.fromText('%s', Cesium.Color.RED, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
-    """ % (lla[0], lla[1], lla[2], name)
+    """ % (name, lla[0], lla[1], lla[2], name[0])
 
     return code
 
@@ -274,9 +282,10 @@ def georef(imgname, tle1, tle2, aos, los):
 
     # Ok, we have sat position at time of AOS and LOS. The tricky part here is those are in
     # Earth-Centered Intertial (ECI) reference system. The model used is TEME (True equator,
-    # mean equinox). Let's calculate the SSP using two methods:
+    # mean equinox). Let's calculate the SSP using three methods:
     # - simple (that assumes spherical Earth)
     # - oblate Earth (uses passed ellipsoid, WGS84 in this case)
+    # - using pymap3d lib (which is most precise)
 
     print("METHOD 1 (spherical Earth)")
     lla1 = teme2geodetic_spherical(pos1[0], pos1[1], pos1[2], d1)
@@ -305,6 +314,10 @@ def georef(imgname, tle1, tle2, aos, los):
     print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
     (pos2[0], pos2[1], pos2[2], lla2[0], lla2[1], lla2[2]))
 
+    # Ok, we have the sat position in LLA format. Getting sub-satellite point is trivial. Just assume altitude is 0.
+    lla1 = [ lla1[0], lla1[1], 0 ]
+    lla2 = [ lla2[0], lla2[1], 0 ]
+
     # STEP 3: Calculate the radial distance between AOS SSP and LOS SSP, divide is by image height. The result will be
     # angular resolution per pixel. Now multiply the value by image width/2 and then add/subtract from the AOS/LOS SSP
     # to get corners of the image.
@@ -329,9 +342,10 @@ if __name__ == "__main__":
         "georef": True # Georeference
     }
 
-    if len(sys.argv) < 5:
-        usage()
-        sys.exit(-1)
+    # Let's ignore input parameters and pretend we were asked to georeference observation #1276.
+    #if len(sys.argv) < 5:
+    #    usage()
+    #    sys.exit(-1)
 
     tle1 = '1 28654U 05018A   20098.54037539  .00000075  00000-0  65128-4 0  9992'
     tle2 = '2 28654  99.0522 154.2797 0015184  73.2195 287.0641 14.12501077766909'
@@ -341,9 +355,6 @@ if __name__ == "__main__":
 
     georef("1276.png", tle1, tle2, aos, los)
 
-
-# NOTES: If the above doesn't work, the next thing to try will be this:
-# https://github.com/geospace-code/pymap3d, especially eci2geodetic
 
 # This one is interesting.
 # https://en.wikipedia.org/wiki/Geographic_coordinate_conversion#From_ECEF_to_geodetic_coordinates
