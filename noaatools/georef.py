@@ -37,6 +37,12 @@ Ellipsoid = namedtuple('Ellipsoid', "a finv")
 # Source: https://en.wikipedia.org/wiki/Earth_ellipsoid#Historical_Earth_ellipsoids
 ellipsoid_wgs84 = Ellipsoid(a = 6378.137, finv = 298.257223563)
 
+# Sat image aquisition and image transmission is not instanteneous. There is some delay. It's small, but
+# bacause the sat moves at speeds of more than 7km/s, even fractions of second make a big deal of a difference.
+# Not sure if this data is available anywhere. I think it'll have to be picked with trial-and-error.
+# This is expressed in seconds.
+NOAA_PROCESSING_DELAY = 0.5
+
 #######################################################################################################
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
@@ -153,23 +159,57 @@ def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
     # True = we want the response in degrees
     return ecef.ecef2geodetic(xecef, yecef, zecef, ell, True)
 
-def georef(tle1, tle2, aos, los):
+def cesium_preamble():
+    code = """
+    var viewer = new Cesium.Viewer('cesiumContainer', {timeline : false, animation : false});
+    var pinBuilder = new Cesium.PinBuilder();
+    """
+
+    return code
+
+def export2cesium_point(lla, name):
+    """
+    Exports specified LLA coordinates to filename, using name as a label.
+    """
+
+    code = """
+    var pinBuilder = new Cesium.PinBuilder();
+
+    var questionPin = viewer.entities.add({
+        name : 'Question mark',
+        position : Cesium.Cartesian3.fromDegrees(%f, %f, %f),
+        billboard : {
+            image : pinBuilder.fromText('%s', Cesium.Color.RED, 48).toDataURL(),
+            verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+        }
+    });
+    """ % (lla[0], lla[1], lla[2], name)
+
+    return code
+
+def export2cesium(outfile, imgfile, aos, los, lla_aos, lla_los, tle1, tle2):
+
+    txt = cesium_preamble()
+    txt =  export2cesium_point(lla_aos, "AOS:" + str(aos))
+    txt += export2cesium_point(lla_los, "LOS:" + str(los))
+
+    f = open(outfile, "w")
+    f.write(txt)
+    f.close()
+
+
+def georef(imgname, tle1, tle2, aos, los):
     """ This is a naive georeferencing method:
         - calculates the sat location at AOS and LOS points (using )
     then calculates distance between them. """
 
+    # Convert date as a string datetime. Make sure to use UTC rather than the default (local timezone)
     d1 = datetime.fromisoformat(aos).replace(tzinfo=timezone.utc)
     d2 = datetime.fromisoformat(los).replace(tzinfo=timezone.utc)
 
-    # Sat image aquisition and image transmission is not instanteneous. There is some delay. It's small, but
-    # bacause the sat moves at speeds of more than 7km/s, even fractions of second make a big deal of a difference.
-    # Not sure if this data is available anywhere. I think it'll have to be picked with trial-and-error.
-    # This is expressed in seconds.
-    delay = 0.5
-
     # STEP 1: Calculate sat location at AOS and LOS
 
-    # This approach uses old API 1.x
+    # Old sgp4 API 1.x used this approach, which is not recommended anymore.
     #sat_old = twoline2rv(tle1, tle2, wgs72)
     #pos1_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
     #pos2_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
@@ -179,8 +219,11 @@ def georef(tle1, tle2, aos, los):
     sat = Satrec.twoline2rv(tle1, tle2)
     jd1, fr1 = jday(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
     jd2, fr2 = jday(d2.year, d2.month, d2.day, d2.hour, d2.minute, d2.second)
-    fr1 += delay/86400.0 # Take sat processing/transmission delay into consideration
-    fr2 += delay/86400.0
+
+    # Take sat processing/transmission delay into consideration. At AOS time the signal received
+    # was already NOAA_PROCESSING_DELAY seconds old.
+    fr1 -= NOAA_PROCESSING_DELAY/86400.0
+    fr2 -= NOAA_PROCESSING_DELAY/86400.0
 
     _, pos1, _ = sat.sgp4(jd1, fr1) # returns error, position and velocity - we care about position only
     _, pos2, _ = sat.sgp4(jd2, fr2)
@@ -226,6 +269,7 @@ def georef(tle1, tle2, aos, los):
     # to get corners of the image.
 
     # STEP 4: Export georeferencing data.
+    export2cesium(imgname+".js", imgname, d1, d2, lla1, lla2, tle1, tle2)
 
 def usage():
     print(USAGE)
@@ -247,15 +291,13 @@ if __name__ == "__main__":
         usage()
         sys.exit(-1)
 
-    #process(sys.argv[1], params)
-
     tle1 = '1 28654U 05018A   20098.54037539  .00000075  00000-0  65128-4 0  9992'
     tle2 = '2 28654  99.0522 154.2797 0015184  73.2195 287.0641 14.12501077766909'
 
     aos = '2020-04-12 09:01:03.063476'
     los = '2020-04-12 09:17:06.466954'
 
-    georef(tle1, tle2, aos, los)
+    georef("1276.png", tle1, tle2, aos, los)
 
 
 # NOTES: If the above doesn't work, the next thing to try will be this:
