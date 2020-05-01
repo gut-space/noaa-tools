@@ -4,7 +4,7 @@ module will attempt to georeference the images.
 Operations that currently seem to be working:
 
 * Histogram stretch (global and adaptive)
-* write (can write whole image, left channel only, right channel only, or both)
+* Write to a file (can write whole image, left channel only, right channel only, or both)
 * Border (can draw border around the area of detected actual sat image)
 * Denoise
 * Show image (useful for playing with parameters)
