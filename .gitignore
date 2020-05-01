@@ -1,3 +1,5 @@
 venv/
 .pytest_cache
 .vscode/*
+*/__pycache__
+tests/1276*.png
