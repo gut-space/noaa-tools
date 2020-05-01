@@ -9,6 +9,32 @@ RIGHT_BEGIN_COLUMN = 1124
 RIGHT_END_COLUMN = 2033
 
 def process_img(file: str, params):
+    """
+    Processes PNG image received from NOAA sat.
+
+    Parameters
+    ==========
+    file: str - filename of the PNG file to be processed
+    params : dict - specifies which processing should be done
+
+    Params should have the following format:
+    params = {
+        "histogram": True,
+        "histogram-adaptive": True,
+        "border": True,
+        "show": True,
+        "write": False,
+        "write-left": True,
+        "write-right": False,
+        "denoise": False,
+        "georef": True # Georeference
+    }
+
+    Returns
+    =======
+    True
+    """
+
     img = cv2.imread(file)
 
     ok, error = checkimg(img)
@@ -73,7 +99,6 @@ def mark_left(img):
     # width and number of channels are ignored.
     height, _, _ = img.shape
 
-    print("#height=%s" % height)
     # These are some magic number. The left image starts at pixel 28 and ends on pixel 992.
     return cv2.rectangle(img, (LEFT_BEGIN_COLUMN, 0), (LEFT_END_COLUMN - 1, height - 1), (255,0,0) )
 
@@ -84,12 +109,24 @@ def mark_right(img):
     return cv2.rectangle(img, (RIGHT_BEGIN_COLUMN, 0), (RIGHT_END_COLUMN - 1, height - 1), (0,255,0))
 
 def show2img(img1, img2, title1 = "before", title2 = "after"):
+    """
+    Shows two images, side by side.
+
+    Parameters
+    ==========
+    img1, img2 - image one and two
+    title1, title2 - title to be displayed
+    """
     cv2.imshow(title1, img1)
     cv2.imshow(title2, img2)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 def show_img(img, title="image", wait = True):
+    """
+    Displays an image. Depending on the wait value, it returns immediately or waits for a key press.
+    wait = False is useful when you want to display the first image of several.
+    """
 
     # Let's use simple showing using cv2
     cv2.imshow(title, img)
