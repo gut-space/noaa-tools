@@ -39,8 +39,7 @@ process_img("tests/1276.png", params)
 
 Currently is being worked on. There's code in noaa_postproc/georef.py, but it doesn't work yet.
 
-
-Example Cesium code:
+Example code:
 
 ```
 from noaatools.georef import georef
