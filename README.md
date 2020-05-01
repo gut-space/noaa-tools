@@ -43,29 +43,17 @@ Currently is being worked on. There's code in noaa_postproc/georef.py, but it do
 Example Cesium code:
 
 ```
+from noaatools.georef import georef
 
-    var p = Cesium.Cartesian3.fromElements(944166.043, 851659.627, 7099575.419)
-    var ssp = Cesium.Cartesian3.fromDegrees(79.904783, 40.435743, 855.126588)
+tle1 = '1 28654U 05018A   20098.54037539  .00000075  00000-0  65128-4 0  9992'
+tle2 = '2 28654  99.0522 154.2797 0015184  73.2195 287.0641 14.12501077766909'
 
-    console.log(p)
-    console.log(ssp)
+aos = '2020-04-12 09:01:03.063476'
+los = '2020-04-12 09:17:06.466954'
 
-    viewer.entities.add({
-    position : p,
-    billboard : {
-        image : '../images/whiteShapes.png',
-        imageSubRegion : new Cesium.BoundingRectangle(49, 43, 18, 18),
-        color : Cesium.Color.WHITE
-    }
-    });
+filename = '1276.png'
 
-    viewer.entities.add({
-    position : ssp,
-    billboard : {
-        image : '../images/whiteShapes.png',
-        imageSubRegion : new Cesium.BoundingRectangle(49, 43, 18, 18),
-        color : Cesium.Color.YELLOW
-    }
-    });
+georef(filename, tle1, tle2, aos, los)
 
+# The output Cesium code will be generated to 1276.js
 ```
