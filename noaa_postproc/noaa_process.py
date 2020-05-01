@@ -19,10 +19,8 @@ USAGE = '''
 # los - loss of signal
 '''
 
-import cv2
 import sys
 from datetime import datetime, timezone
-from matplotlib import pyplot as plt
 from collections import namedtuple
 from math import atan, atan2, sqrt, pi, sin, cos
 
@@ -30,135 +28,11 @@ from sgp4.io import twoline2rv
 from sgp4.earth_gravity import wgs72, wgs84
 from sgp4.api import jday, Satrec
 
-LEFT_BEGIN_COLUMN = 84
-LEFT_END_COLUMN = 993
-
-RIGHT_BEGIN_COLUMN = 1124
-RIGHT_END_COLUMN = 2033
-
 # This defines ellipsoid (a = equatorial radius in km, finv = inverse flattening)
 Ellipsoid = namedtuple('Ellipsoid', "a finv")
 
 # Source: https://en.wikipedia.org/wiki/Earth_ellipsoid#Historical_Earth_ellipsoids
 ellipsoid_wgs84 = Ellipsoid(a = 6378.137, finv = 298.257223563)
-
-
-def process(file: str, params):
-    img = cv2.imread(file)
-
-    ok, error = checkimg(img)
-    if not ok:
-        print("ERROR: %s" % error)
-        return False
-
-    #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # Denoising (gives poor results so far, need to tweak the parameters)
-    if params['denoise']:
-        img_d = cv2.fastNlMeansDenoisingColored(img, None, 3, 10, 7, 21)
-        show2img(img, img_d)
-        img = img_d
-
-    # Let's mark borders around the detected images.
-    if params['border']:
-        img = mark_left(img)
-        img = mark_right(img)
-
-    l = extract_left(img)
-    r = extract_right(img)
-
-    #show_img(img)
-    if params['histogram']:
-        l = cv2.cvtColor(l, cv2.COLOR_BGR2GRAY)
-        r = cv2.cvtColor(r, cv2.COLOR_BGR2GRAY)
-
-        if params['histogram-adaptive']:
-            clahe = cv2.createCLAHE(clipLimit = 2.0, tileGridSize=(8,8))
-            l = clahe.apply(l)
-            r = clahe.apply(r)
-        else:
-            l = cv2.equalizeHist(l)
-            r = cv2.equalizeHist(r)
-
-    # Processing done. Let's display them
-    if params['show']:
-        if params['write-left']:
-            show_img(l, title="left", wait=False)
-        if params['write-right']:
-            show_img(r, title="right", wait=False)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
-    # Time to write output files.
-    fname = file.split('.')
-    fname = '.'.join(fname[:-1])
-
-    if params['write']:
-        cv2.imwrite(fname + '-annot.png', img)
-
-    if params['write-left']:
-        cv2.imwrite(fname + '-left.png', l)
-
-    if params['write-right']:
-        cv2.imwrite(fname + '-right.png', r)
-
-    return True
-
-def mark_left(img):
-    # width and number of channels are ignored.
-    height, _, _ = img.shape
-
-    print("#height=%s" % height)
-    # These are some magic number. The left image starts at pixel 28 and ends on pixel 992.
-    return cv2.rectangle(img, (LEFT_BEGIN_COLUMN, 0), (LEFT_END_COLUMN - 1, height - 1), (255,0,0) )
-
-def mark_right(img):
-
-    height, _, _ = img.shape
-    # These are some magic number. The right image starts at pixel 112 and ends on pixel 2033.
-    return cv2.rectangle(img, (RIGHT_BEGIN_COLUMN, 0), (RIGHT_END_COLUMN - 1, height - 1), (0,255,0))
-
-def show2img(img1, img2, title1 = "before", title2 = "after"):
-    cv2.imshow(title1, img1)
-    cv2.imshow(title2, img2)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-def show_img(img, title="image", wait = True):
-
-    # Let's use simple showing using cv2
-    cv2.imshow(title, img)
-    if wait:
-        cv2.waitKey(0)
-
-    # The alternative is to use pyplot from mathplotlib
-    #plt.imshow(image, cmap = 'gray', interpolation = 'bicubic')
-    #Uncomment this to hide X, Y axis values
-    #plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
-
-    #plt.plot([200,300,400],[200,200,300],'c', linewidth=5)
-    #plt.show()
-
-def extract_left(img):
-    _, height, _ = img.shape
-    return img[0:height-1, LEFT_BEGIN_COLUMN:LEFT_END_COLUMN]
-
-def extract_right(img):
-    _, height, _ = img.shape
-    return img[0:height-1, RIGHT_BEGIN_COLUMN:RIGHT_END_COLUMN]
-
-def checkimg(img):
-    height, width, _ = img.shape
-    # Check if this looks like NOAA image at all.
-
-    # Check 1: verify it has width of 2080 pixels
-    if not height:
-        return False, "Image has 0 height."
-    if width != 2080:
-        return False, "Image has incorrect width: %d, expected 2080 pixels" % width
-
-    return True, ""
-
 
 #######################################################################################################
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
@@ -217,7 +91,7 @@ def temeToGeodetic_spherical(x, y, z, jd, fr):
     lon = atan2(y, x) - gmst # lambda-E
     alt = sqrt(x*x + y*y + z*z) - RE # h
 
-    return lat, lon, alt
+    return lat*180/pi, lon*180/pi, alt
 
 def temeToGeodetic(x, y, z, ellipsoid, jd, fr):
     """
@@ -234,6 +108,10 @@ def temeToGeodetic(x, y, z, ellipsoid, jd, fr):
     ellipsoid: Ellipsoid - an Earth exlipsoid specifying Earth oblateness, e.g. Ellipsoid_wgs84. Two params are used from it:
             a and inverse of f. Both must be specified in kms
     jd, fr : float - julian date - expressed as two floats that should be summed together.
+
+    Returns
+    =======
+    lat, lon, alt - latitude, longitude (both in degrees), alt (in km)
     """
 
     # First, we need to do some basic calculations for Earth oblateness
@@ -261,7 +139,7 @@ def temeToGeodetic(x, y, z, ellipsoid, jd, fr):
 
     lon = atan2(y, x) - gmst # lambda-E
 
-    return phi, lon, h
+    return phi*180/pi, lon*180/pi, h
 
 def georef_naive(tle1, tle2, aos, los):
     """ This is a naive georeferencing method:
@@ -307,20 +185,20 @@ def georef_naive(tle1, tle2, aos, los):
     print("METHOD 1 (spherical Earth)")
     lla1 = temeToGeodetic_spherical(pos1[0], pos1[1], pos1[2], jd1, fr1)
     print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos1[0], pos1[1], pos1[2], lla1[0]*180/pi, lla1[1]*180/pi, lla1[2]))
+    (pos1[0], pos1[1], pos1[2], lla1[0], lla1[1], lla1[2]))
 
     lla2 = temeToGeodetic_spherical(pos2[0], pos2[1], pos2[2], jd2, fr2)
     print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos2[0], pos2[1], pos2[2], lla2[0]*180/pi, lla2[1]*180/pi, lla2[2]))
+    (pos2[0], pos2[1], pos2[2], lla2[0], lla2[1], lla2[2]))
 
     print("METHOD 2 (oblate Earth)")
     lla1 = temeToGeodetic(pos1[0], pos1[1], pos1[2], ellipsoid_wgs84, jd1, fr1)
     print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos1[0], pos1[1], pos1[2], lla1[0]*180/pi, lla1[1]*180/pi, lla1[2]))
+    (pos1[0], pos1[1], pos1[2], lla1[0], lla1[1], lla1[2]))
 
     lla2 = temeToGeodetic(pos2[0], pos2[1], pos2[2], ellipsoid_wgs84, jd2, fr2)
     print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos2[0], pos2[1], pos2[2], lla2[0]*180/pi, lla2[1]*180/pi, lla2[2]))
+    (pos2[0], pos2[1], pos2[2], lla2[0], lla2[1], lla2[2]))
 
     # STEP 3: Calculate the radial distance between AOS SSP and LOS SSP, divide is by image height. The result will be
     # angular resolution per pixel. Now multiply the value by image width/2 and then add/subtract from the AOS/LOS SSP
