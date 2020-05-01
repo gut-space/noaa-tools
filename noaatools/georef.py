@@ -31,6 +31,11 @@ from sgp4.api import jday, Satrec
 import numpy as np
 from pymap3d import ecef
 
+# This is needed to export orbit to CZML format (Cesium)
+from tletools import TLE
+from poliastro.czml.extract_czml import CZMLExtractor
+from astropy import time
+
 # This defines ellipsoid (a = equatorial radius in km, finv = inverse flattening)
 Ellipsoid = namedtuple('Ellipsoid', "a finv")
 
@@ -41,7 +46,7 @@ ellipsoid_wgs84 = Ellipsoid(a = 6378.137, finv = 298.257223563)
 # bacause the sat moves at speeds of more than 7km/s, even fractions of second make a big deal of a difference.
 # Not sure if this data is available anywhere. I think it'll have to be picked with trial-and-error.
 # This is expressed in seconds.
-NOAA_PROCESSING_DELAY = 0.5
+NOAA_PROCESSING_DELAY = 0.0
 
 #######################################################################################################
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
@@ -161,8 +166,9 @@ def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
 
 def cesium_preamble():
     code = """
-    var viewer = new Cesium.Viewer('cesiumContainer', {timeline : false, animation : false});
+    var viewer = new Cesium.Viewer('cesiumContainer');
     var pinBuilder = new Cesium.PinBuilder();
+
     """
 
     return code
@@ -173,8 +179,6 @@ def export2cesium_point(lla, name):
     """
 
     code = """
-    var pinBuilder = new Cesium.PinBuilder();
-
     var questionPin = viewer.entities.add({
         name : 'Question mark',
         position : Cesium.Cartesian3.fromDegrees(%f, %f, %f),
@@ -187,16 +191,53 @@ def export2cesium_point(lla, name):
 
     return code
 
+def export2cesium_tle(tle1, tle2, satname, aos, los):
+    tle = TLE.from_lines(satname, tle1, tle2)
+    orb = tle.to_orbit()
+
+    sample_points = 10
+
+
+    aos_astropy = time.Time(aos, scale="utc")
+    los_astropy = time.Time(los, scale="utc")
+
+    extractor = CZMLExtractor(aos_astropy, los_astropy, sample_points)
+    extractor.add_orbit(orb, path_show=True, path_width=3, path_color=[125, 80, 120, 255], label_text=satname)
+
+    txt =" var czml = [\n"
+    for i in extractor.packets:
+        txt += repr(i)
+        txt += ",\n"
+    txt += "];\n"
+
+    # I don't understand what's exactly going on, but I suspect this is a poliastro 0.13.1 bug. When it exports data
+    # to CZML, the timezone is messed up.
+    # This is how it looks like:  "availability": "2020-04-12T09:01:03Z/2020-04-12T09:17:06Z",
+    # This is how it SHOULD look: "availability": "2020-04-12T09:01:03/2020-04-12T09:17:06",
+
+    # replace Z/ with /
+    # replace Z" with "
+    txt = txt.replace("Z/", "/")
+    txt = txt.replace('Z"', '"')
+
+
+
+    txt += "var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml));"
+
+    return txt
+
 def export2cesium(outfile, imgfile, aos, los, lla_aos, lla_los, tle1, tle2):
 
-    txt = cesium_preamble()
-    txt =  export2cesium_point(lla_aos, "AOS:" + str(aos))
+    txt =  cesium_preamble()
+    txt += export2cesium_tle(tle1, tle2, "satname", aos, los)
+    txt += export2cesium_point(lla_aos, "AOS:" + str(aos))
     txt += export2cesium_point(lla_los, "LOS:" + str(los))
 
     f = open(outfile, "w")
     f.write(txt)
     f.close()
 
+    print("Georeference data exported to %s" % outfile)
 
 def georef(imgname, tle1, tle2, aos, los):
     """ This is a naive georeferencing method:
@@ -269,7 +310,8 @@ def georef(imgname, tle1, tle2, aos, los):
     # to get corners of the image.
 
     # STEP 4: Export georeferencing data.
-    export2cesium(imgname+".js", imgname, d1, d2, lla1, lla2, tle1, tle2)
+    outfile = ".".join(imgname.split('.')[:-1]) + ".js"
+    export2cesium(outfile, imgname, d1, d2, lla1, lla2, tle1, tle2)
 
 def usage():
     print(USAGE)
