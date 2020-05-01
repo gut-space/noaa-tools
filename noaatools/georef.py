@@ -28,6 +28,9 @@ from sgp4.io import twoline2rv
 from sgp4.earth_gravity import wgs72, wgs84
 from sgp4.api import jday, Satrec
 
+import numpy as np
+from pymap3d import ecef
+
 # This defines ellipsoid (a = equatorial radius in km, finv = inverse flattening)
 Ellipsoid = namedtuple('Ellipsoid', "a finv")
 
@@ -68,7 +71,7 @@ def julianDateToGMST(jd, fr):
     # Let's truncate this and return the value in degrees.
     return (gmst % 24)*(15/3600.0)
 
-def temeToGeodetic_spherical(x, y, z, jd, fr):
+def teme2geodetic_spherical(x, y, z, t):
     """
     Converts ECI coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).
     This function assumes the Earth is completely round.
@@ -83,6 +86,7 @@ def temeToGeodetic_spherical(x, y, z, jd, fr):
     jd, fr : float - julian date - expressed as two floats that should be summed together.
     """
 
+    jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
     gmst = julianDateToGMST(jd, fr)
 
     RE = 6378.137 # Earth radius (in km)
@@ -93,7 +97,7 @@ def temeToGeodetic_spherical(x, y, z, jd, fr):
 
     return lat*180/pi, lon*180/pi, alt
 
-def temeToGeodetic(x, y, z, ellipsoid, jd, fr):
+def teme2geodetic_oblate(x, y, z, t, ellipsoid):
     """
     Converts ECEF coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).
     ellipsoid is Earth ellipsoid to be used (e.g. ellipsoid_wgs84).
@@ -135,13 +139,21 @@ def temeToGeodetic(x, y, z, ellipsoid, jd, fr):
 
         phii=phi
 
+    jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
     gmst = julianDateToGMST(jd, fr)
 
     lon = atan2(y, x) - gmst # lambda-E
 
     return phi*180/pi, lon*180/pi, h
 
-def georef_naive(tle1, tle2, aos, los):
+def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
+
+    xecef, yecef, zecef = ecef.eci2ecef(np.array([x*1000]), np.array([y*1000]), np.array([z*1000]), t)
+
+    # True = we want the response in degrees
+    return ecef.ecef2geodetic(xecef, yecef, zecef, ell, True)
+
+def georef(tle1, tle2, aos, los):
     """ This is a naive georeferencing method:
         - calculates the sat location at AOS and LOS points (using )
     then calculates distance between them. """
@@ -183,20 +195,29 @@ def georef_naive(tle1, tle2, aos, los):
     # - oblate Earth (uses passed ellipsoid, WGS84 in this case)
 
     print("METHOD 1 (spherical Earth)")
-    lla1 = temeToGeodetic_spherical(pos1[0], pos1[1], pos1[2], jd1, fr1)
+    lla1 = teme2geodetic_spherical(pos1[0], pos1[1], pos1[2], d1)
     print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
     (pos1[0], pos1[1], pos1[2], lla1[0], lla1[1], lla1[2]))
 
-    lla2 = temeToGeodetic_spherical(pos2[0], pos2[1], pos2[2], jd2, fr2)
+    lla2 = teme2geodetic_spherical(pos2[0], pos2[1], pos2[2], d2)
     print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
     (pos2[0], pos2[1], pos2[2], lla2[0], lla2[1], lla2[2]))
 
     print("METHOD 2 (oblate Earth)")
-    lla1 = temeToGeodetic(pos1[0], pos1[1], pos1[2], ellipsoid_wgs84, jd1, fr1)
+    lla1 = teme2geodetic_oblate(pos1[0], pos1[1], pos1[2], d1, ellipsoid_wgs84)
     print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
     (pos1[0], pos1[1], pos1[2], lla1[0], lla1[1], lla1[2]))
 
-    lla2 = temeToGeodetic(pos2[0], pos2[1], pos2[2], ellipsoid_wgs84, jd2, fr2)
+    lla2 = teme2geodetic_oblate(pos2[0], pos2[1], pos2[2], d2, ellipsoid_wgs84)
+    print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
+    (pos2[0], pos2[1], pos2[2], lla2[0], lla2[1], lla2[2]))
+
+    print("METHOD 3 (pymap3d)")
+    lla1 = teme2geodetic_pymap3d(pos1[0], pos1[1], pos1[2], d1)
+    print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
+    (pos1[0], pos1[1], pos1[2], lla1[0], lla1[1], lla1[2]))
+
+    lla2 = teme2geodetic_pymap3d(pos2[0], pos2[1], pos2[2], d2)
     print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
     (pos2[0], pos2[1], pos2[2], lla2[0], lla2[1], lla2[2]))
 
@@ -234,7 +255,7 @@ if __name__ == "__main__":
     aos = '2020-04-12 09:01:03.063476'
     los = '2020-04-12 09:17:06.466954'
 
-    georef_naive(tle1, tle2, aos, los)
+    georef(tle1, tle2, aos, los)
 
 
 # NOTES: If the above doesn't work, the next thing to try will be this:
