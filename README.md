@@ -9,7 +9,11 @@ Operations that currently seem to be working:
 * Denoise
 * Show image (useful for playing with parameters)
 
-Author: @tomaszmrugalski
+Operation under development:
+
+* Georeferencing
+
+Author: [Tomek Mrugalski](https://github.com/tomaszmrugalski/)
 
 # Usage
 
