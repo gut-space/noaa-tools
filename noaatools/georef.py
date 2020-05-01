@@ -318,11 +318,23 @@ def georef(imgname, tle1, tle2, aos, los):
     lla1 = [ lla1[0], lla1[1], 0 ]
     lla2 = [ lla2[0], lla2[1], 0 ]
 
-    # STEP 3: Calculate the radial distance between AOS SSP and LOS SSP, divide is by image height. The result will be
-    # angular resolution per pixel. Now multiply the value by image width/2 and then add/subtract from the AOS/LOS SSP
-    # to get corners of the image.
+    # STEP 3: Find image corners. Here's a proposal:
+    #
+    # 1. Calculate the orthodromic distance (a great-circle distance) between AOS SSP and LOS SSP.
+    #    See https://en.wikipedia.org/wiki/Great-circle_distance
+    #
+    # 2. Find great circle that passes through AOS SSP and LOS SSP.
+    #
+    # 3. Find a great circle that passes through AOS SSP and is perpendicular to great circle found in step 2.
+    #    Calculate cross-track distance (use image's widht/height multiplied by the orthodromic distance in step 1),
+    #    traverse half the distance in each way to find two corners of the image.
+    #
+    # 4. Repreat step 3, but use LOS SSP. This will find the remaining two corners of the image.
 
-    # STEP 4: Export georeferencing data.
+    # STEP 4: Do we need to detect if it's northbound or southbound fly-over? We can do it easily, by
+    # comparing aos_lat (lla1[1]) with los_lat (lla2[1])
+
+    # STEP 5: Export georeferencing data.
     outfile = ".".join(imgname.split('.')[:-1]) + ".js"
     export2cesium(outfile, imgname, d1, d2, lla1, lla2, tle1, tle2)
 

@@ -60,3 +60,11 @@ georef(filename, tle1, tle2, aos, los)
 
 # The output Cesium code will be generated to 1276.js
 ```
+
+# Useful links
+
+* GDAL + python: https://pcjericks.github.io/py-gdalogr-cookbook/
+* Georeferencing in qgis: https://www.qgistutorials.com/en/docs/georeferencing_basics.html
+* pymap3d has tons of useful coordinate transforms: https://geospace-code.github.io/pymap3d/index.html
+* wxtoimg man page: https://wxtoimgrestored.xyz/support/wxtoimg.pdf
+* Cesium support for displaying a single image is confusing. https://www.cesium.com/docs/cesiumjs-ref-doc/SingleTileImageryProvider.html
