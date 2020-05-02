@@ -318,7 +318,7 @@ def georef(imgname, tle1, tle2, aos, los):
     lla1 = [ lla1[0], lla1[1], 0 ]
     lla2 = [ lla2[0], lla2[1], 0 ]
 
-    # STEP 3: Find image corners. Here's a proposal:
+    # STEP 3: Find image corners. Here's an algorithm proposal:
     #
     # 1. Calculate the orthodromic distance (a great-circle distance) between AOS SSP and LOS SSP.
     #    See https://en.wikipedia.org/wiki/Great-circle_distance
@@ -337,6 +337,11 @@ def georef(imgname, tle1, tle2, aos, los):
     # STEP 5: Export georeferencing data.
     outfile = ".".join(imgname.split('.')[:-1]) + ".js"
     export2cesium(outfile, imgname, d1, d2, lla1, lla2, tle1, tle2)
+
+    # STEP 6: (possibly outside of this script):
+    # - use GDAL library to georeference image (https://pcjericks.github.io/py-gdalogr-cookbook/)
+    # - import into QGIS (and follow this tutorial: https://www.qgistutorials.com/en/docs/georeferencing_basics.html)
+    # - display the image in Cesium (https://www.cesium.com/docs/cesiumjs-ref-doc/SingleTileImageryProvider.html)
 
 def usage():
     print(USAGE)
