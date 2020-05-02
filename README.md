@@ -15,6 +15,29 @@ Operation under development:
 
 Author: [Tomek Mrugalski](https://github.com/tomaszmrugalski/)
 
+# Installation
+
+Do the standard python thing:
+
+```
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+# Running unit-tests
+
+The unit-tests coverage is miserable so far. Nevertheless, you may do the following:
+
+```
+pip install pytest
+python -m pytest -s -v
+```
+
+During the first run, an image for satnogs observation 1276 (about 3MB) will be downloaded. It's a
+reasonably recent, good quality observation. I've decided to keep the repo clean and not pollute it
+with unnecessary images.
+
 # Usage
 
 To process an image, you should call process_img and pass two parameters. First is the name
