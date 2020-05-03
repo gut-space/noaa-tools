@@ -174,9 +174,12 @@ def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
 
 def cesium_preamble():
     code = """
+    // Code generated with noaa-tools.
+    // This can be executed using Cesium. The easiest way to test it is to go to
+    // https://sandcastle.cesium.com and paste this code there.
+
     var viewer = new Cesium.Viewer('cesiumContainer');
     var pinBuilder = new Cesium.PinBuilder();
-
     """
 
     return code
@@ -200,11 +203,20 @@ def export2cesium_point(lla, name):
     return code
 
 def export2cesium_tle(tle1, tle2, satname, aos, los):
+    """
+    Generates JS Cesium code that shows satellite trajectory between AOS and LOS.
+
+    Parameters
+    ==========
+    tle1, tle2 - first and second line of TLE
+    satname - to be displayed
+    aos - Aquisition of Singal in Timedate format
+    los - Loss of Signal in Timedate format
+    """
     tle = TLE.from_lines(satname, tle1, tle2)
     orb = tle.to_orbit()
 
     sample_points = 10
-
 
     aos_astropy = time.Time(aos, scale="utc")
     los_astropy = time.Time(los, scale="utc")
@@ -219,23 +231,33 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
     txt += "];\n"
 
     # I don't understand what's exactly going on, but I suspect this is a poliastro 0.13.1 bug. When it exports data
-    # to CZML, the timezone is messed up.
+    # to CZML, the timezone is messed up. I've fixed very similar problem in Poliastro. The patch for this been accepted
+    # and will be released in upcoming 0.14.0.
     # This is how it looks like:  "availability": "2020-04-12T09:01:03Z/2020-04-12T09:17:06Z",
     # This is how it SHOULD look: "availability": "2020-04-12T09:01:03/2020-04-12T09:17:06",
 
-    # replace Z/ with /
-    # replace Z" with "
-    txt = txt.replace("Z/", "/")
-    txt = txt.replace('Z"', '"')
-
-
+    txt = txt.replace("Z/", "/") # replace Z/ with /
+    txt = txt.replace('Z"', '"') # replace Z" with "
 
     txt += "var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml));"
 
     return txt
 
 def export2cesium(outfile, imgfile, aos, los, lla_aos, lla_los, tle1, tle2):
+    """
+    Exports all data to JavaScript that's usable with Cesium.
 
+    Parameters
+    ==========
+    outfile - output filename to write content to
+    imgfile - name of the input PNG file (currently not used yet)
+    aos - aquisition of signal, in timedate format
+    los - loss of signal, in timedate format
+    lla_aos - an array of three coords that specify subsat point in LLA notation (longitude, lattitude, altitude)
+    lla_aos - an array of three coords that specify subsat point in LLA notation (longitude, lattitude, altitude)
+    tle1 - first line of TLE data
+    tle2 - second line of TLE data
+    """
     txt =  cesium_preamble()
     txt += export2cesium_tle(tle1, tle2, "satname", aos, los)
     txt += export2cesium_point(lla_aos, "AOS:" + str(aos))
