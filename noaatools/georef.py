@@ -353,7 +353,7 @@ def georef(imgname, tle1, tle2, aos, los):
 
     los1 = get_ssp(los1)
     los2 = get_ssp(los2)
-    los3 = get_ssp(aos3)
+    los3 = get_ssp(los3)
 
     # STEP 3: Find image corners. Here's an algorithm proposal:
     #
