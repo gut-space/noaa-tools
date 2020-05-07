@@ -167,10 +167,17 @@ def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
     lat, lon, alt - latitude, longitude (both in degrees), alt (in km)
     """
 
+    # Short version - whole conversion in one go
+    #lat, lon, alt = ecef.eci2geodetic(x*1000, y*1000, z*1000, t)
+    #return lat, lon, alt/1000.0
+
+    print("teme[x,y,z]=%f, %f, %f" % (x, y, z))
     xecef, yecef, zecef = ecef.eci2ecef(np.array([x*1000]), np.array([y*1000]), np.array([z*1000]), t)
+    print("exef[x,y,z]=%f, %f, %f" % (xecef, yecef, zecef))
 
     # True = we want the response in degrees
-    return ecef.ecef2geodetic(xecef, yecef, zecef, ell, True)
+    lat, lon, alt = ecef.ecef2geodetic(xecef, yecef, zecef, ell, True)
+    return lat, lon, alt/1000.0
 
 def cesium_preamble():
     code = """
@@ -243,7 +250,7 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
 
     return txt
 
-def export2cesium(outfile, imgfile, aos, los, lla_aos, lla_los, tle1, tle2):
+def export2cesium(outfile, imgfile, aos, los, aos_list, los_list, methods, tle1, tle2):
     """
     Exports all data to JavaScript that's usable with Cesium.
 
@@ -258,16 +265,27 @@ def export2cesium(outfile, imgfile, aos, los, lla_aos, lla_los, tle1, tle2):
     tle1 - first line of TLE data
     tle2 - second line of TLE data
     """
+
+    if len(methods) != len(aos_list) or len(methods) != len(los_list):
+        raise Exception("Incorrect parameter size: len(methods) != len(aos_list) != len(los_list)")
+
     txt =  cesium_preamble()
     txt += export2cesium_tle(tle1, tle2, "satname", aos, los)
-    txt += export2cesium_point(lla_aos, "AOS:" + str(aos))
-    txt += export2cesium_point(lla_los, "LOS:" + str(los))
+    txt += "\n\n"
+
+    for i in range(0, len(methods)):
+        txt += " // points %d out of %d" % (i, len(methods))
+        txt += export2cesium_point(aos_list[i], "AOS:" + str(aos) + ", method " + methods[i])
+        txt += export2cesium_point(los_list[i], "LOS:" + str(los) + ", method " + methods[i])
 
     f = open(outfile, "w")
     f.write(txt)
     f.close()
 
     print("Georeference data exported to %s" % outfile)
+
+def get_ssp(lla):
+    return [ lla[0], lla[1], 0 ]
 
 def georef(imgname, tle1, tle2, aos, los):
     """ This is a naive georeferencing method:
@@ -309,36 +327,33 @@ def georef(imgname, tle1, tle2, aos, los):
     # - oblate Earth (uses passed ellipsoid, WGS84 in this case)
     # - using pymap3d lib (which is most precise)
 
-    print("METHOD 1 (spherical Earth)")
-    lla1 = teme2geodetic_spherical(pos1[0], pos1[1], pos1[2], d1)
-    print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos1[0], pos1[1], pos1[2], lla1[0], lla1[1], lla1[2]))
+    print("AOS: ECI[x=%f, y=%f, z=%f]" % (pos1[0], pos1[1], pos1[2]))
 
-    lla2 = teme2geodetic_spherical(pos2[0], pos2[1], pos2[2], d2)
-    print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos2[0], pos2[1], pos2[2], lla2[0], lla2[1], lla2[2]))
+    aos1 = teme2geodetic_spherical(pos1[0], pos1[1], pos1[2], d1)
+    aos2 = teme2geodetic_oblate(pos1[0], pos1[1], pos1[2], d1, ellipsoid_wgs84)
+    aos3 = teme2geodetic_pymap3d(pos1[0], pos1[1], pos1[2], d1)
 
-    print("METHOD 2 (oblate Earth)")
-    lla1 = teme2geodetic_oblate(pos1[0], pos1[1], pos1[2], d1, ellipsoid_wgs84)
-    print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos1[0], pos1[1], pos1[2], lla1[0], lla1[1], lla1[2]))
+    print("METHOD 1 (spherical Earth): converted to LLA is long=%f lat=%f alt=%f" % (aos1[0], aos1[1], aos1[2]) )
+    print("METHOD 2 (oblate Earth):    converted to LLA is long=%f lat=%f alt=%f" % (aos2[0], aos2[1], aos2[2]) )
+    print("METHOD 3 (pymap3d):         converted to LLA is long=%f lat=%f alt=%f" % (aos3[0], aos3[1], aos3[2]) )
 
-    lla2 = teme2geodetic_oblate(pos2[0], pos2[1], pos2[2], d2, ellipsoid_wgs84)
-    print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos2[0], pos2[1], pos2[2], lla2[0], lla2[1], lla2[2]))
 
-    print("METHOD 3 (pymap3d)")
-    lla1 = teme2geodetic_pymap3d(pos1[0], pos1[1], pos1[2], d1)
-    print("AOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos1[0], pos1[1], pos1[2], lla1[0], lla1[1], lla1[2]))
+    los1 = teme2geodetic_spherical(pos2[0], pos2[1], pos2[2], d2)
+    los2 = teme2geodetic_oblate(pos2[0], pos2[1], pos2[2], d2, ellipsoid_wgs84)
+    los3 = teme2geodetic_pymap3d(pos2[0], pos2[1], pos2[2], d2)
 
-    lla2 = teme2geodetic_pymap3d(pos2[0], pos2[1], pos2[2], d2)
-    print("LOS: ECI[x=%f, y=%f, z=%f] converted to LLA is long=%f lat=%f alt=%f" %
-    (pos2[0], pos2[1], pos2[2], lla2[0], lla2[1], lla2[2]))
+    print("METHOD 1 (spherical Earth): converted to LLA is long=%f lat=%f alt=%f" % (los1[0], los1[1], los1[2]))
+    print("METHOD 1 (oblate Earth):    converted to LLA is long=%f lat=%f alt=%f" % (los2[0], los2[1], los2[2]))
+    print("METHOD 1 (pymap3d):         converted to LLA is long=%f lat=%f alt=%f" % (los3[0], los3[1], los3[2]))
 
     # Ok, we have the sat position in LLA format. Getting sub-satellite point is trivial. Just assume altitude is 0.
-    lla1 = [ lla1[0], lla1[1], 0 ]
-    lla2 = [ lla2[0], lla2[1], 0 ]
+    aos1 = get_ssp(aos1)
+    aos2 = get_ssp(aos2)
+    aos3 = get_ssp(aos3)
+
+    los1 = get_ssp(los1)
+    los2 = get_ssp(los2)
+    los3 = get_ssp(aos3)
 
     # STEP 3: Find image corners. Here's an algorithm proposal:
     #
@@ -358,7 +373,10 @@ def georef(imgname, tle1, tle2, aos, los):
 
     # STEP 5: Export georeferencing data.
     outfile = ".".join(imgname.split('.')[:-1]) + ".js"
-    export2cesium(outfile, imgname, d1, d2, lla1, lla2, tle1, tle2)
+    aos_list = [ aos1, aos2, aos3 ]
+    los_list = [ los1, los2, los3 ]
+    methods  = [ "spherical", "oblate", "pymap3d" ]
+    export2cesium(outfile, imgname, d1, d2, aos_list, los_list, methods, tle1, tle2)
 
     # STEP 6: (possibly outside of this script):
     # - use GDAL library to georeference image (https://pcjericks.github.io/py-gdalogr-cookbook/)
