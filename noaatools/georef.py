@@ -82,6 +82,49 @@ def julianDateToGMST(jd, fr):
     # Let's truncate this and return the value in degrees.
     return (gmst % 24)*(15/3600.0)
 
+def julianDateToGMST2(jd, fr):
+    """
+    Converts Julian date (expressed at two floats) to GMST (Greenwich Mean Sidereal Time 1982).
+
+    Parameters:
+    jd : float - Julian date full integer + 0.5
+    fr : float - fractional part of the Julian date
+
+    Returns
+    =======
+    A single floating point representing a GMST, expressed in radians
+
+    This calculation takes into consideration the precession, but not nutation.
+
+    Source: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
+    - theta_GSMT1982 function
+
+    This angle defines the difference between the idiosyncratic True
+    Equator Mean Equinox (TEME) frame of reference used by SGP4 and the
+    more standard Pseudo Earth Fixed (PEF) frame of reference.
+
+    From AIAA 2006-6753 Appendix C.
+    """
+    tau = 6.283185307179586476925287
+
+    _second = 1.0 / (24.0 * 60.0 * 60.0)
+
+    T0 = 2451545.0 # J2000, 2000-Jan-01 12h UT1 as Julian date
+
+    # First calculate number of days since J2000 (2000-Jan-01 12h UT1)
+    d = jd - T0
+    d = d + fr
+
+    # Now convert this to centuries. Don't ask me why.
+    t = d / 36525.0
+
+    # Don't undersran
+    g = 67310.54841 + (8640184.812866 + (0.093104 + (-6.2e-6) * t) * t) * t
+    dg = 8640184.812866 + (0.093104 * 2.0 + (-6.2e-6 * 3.0) * t) * t
+    theta = ((jd + fr) % 1.0 + g * _second % 1.0) * tau
+    theta_dot = (1.0 + dg * _second / 36525.0) * tau
+    return theta, theta_dot
+
 def teme2geodetic_spherical(x, y, z, t):
     """
     Converts ECI coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).

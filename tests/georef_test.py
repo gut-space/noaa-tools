@@ -1,12 +1,46 @@
-from noaatools.georef import usage, ellipsoid_wgs84
+from noaatools import georef
 import unittest
 import pytest
 
 class Georefests(unittest.TestCase):
     def test_ellipsoids(self):
 
-        x = ellipsoid_wgs84
+        x = georef.ellipsoid_wgs84
 
         self.assertEqual(x.a, 6378.137)
         self.assertEqual(x.finv, 298.257223563)
 
+
+    def test_theta(self):
+
+        # Data generated using https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
+        # for x in np.linspace(2458978.5, 2458980.5, 20):
+        #     print("[%f,%f]," % (x, sgp4lib.theta_GMST1982(x)[0]))
+        # 2458978.5 is 8 May 2020, 2458980.500000 is 11 May 2020
+        expected = [ [2458978.500000,3.966616],
+                    [2458978.605263,4.629814],
+                    [2458978.710526,5.293013],
+                    [2458978.815789,5.956212],
+                    [2458978.921053,6.619411],
+                    [2458979.026316,0.999424],
+                    [2458979.131579,1.662623],
+                    [2458979.236842,2.325822],
+                    [2458979.342105,2.989020],
+                    [2458979.447368,3.652219],
+                    [2458979.552632,4.315418],
+                    [2458979.657895,4.978616],
+                    [2458979.763158,5.641815],
+                    [2458979.868421,6.305014],
+                    [2458979.973684,6.968213],
+                    [2458980.078947,1.348226],
+                    [2458980.184211,2.011425],
+                    [2458980.289474,2.674624],
+                    [2458980.394737,3.337822],
+                    [2458980.500000,4.001021] ]
+
+        for case in expected:
+            exp = case[1]
+            act = georef.julianDateToGMST(case[0], 0.0)
+            if type(act)is tuple:
+                act = act[0]
+            print("jd=%f expected=%f noaatools=%f (diff=%f)" % (case[0], exp, act, abs(exp-act)))
