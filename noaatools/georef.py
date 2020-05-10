@@ -36,6 +36,10 @@ from tletools import TLE
 from poliastro.czml.extract_czml import CZMLExtractor
 from astropy import time
 
+# Conversion between radians and degrees
+DEG2RAD = 0.017453292519943296
+RAD2DEG = 57.295779513082321
+
 # This defines ellipsoid (a = equatorial radius in km, finv = inverse flattening)
 Ellipsoid = namedtuple('Ellipsoid', "a finv")
 
@@ -68,18 +72,20 @@ def julianDateToGMST(jd, fr):
 
     Source: https://www.cv.nrao.edu/~rfisher/Ephemerides/times.html#GMST
     """
+    T0 = 2451545.0 # J2000, 2000-Jan-01 12h UT1 as Julian date
 
     # First calculate number of days since J2000 (2000-Jan-01 12h UT1)
-    d = jd - 2451545.0
+    d = jd - T0
     d = d + fr
 
     # Now convert this to centuries. Don't ask me why.
-    T = d / 36525
+    T = d / 36525.0
 
     # Calculate GMST (in seconds at UT1=0)
     gmst = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T*T*T
 
     # Let's truncate this and return the value in degrees.
+    # This is clearly broken.
     return (gmst % 24)*(15/3600.0)
 
 def julianDateToGMST2(jd, fr):
@@ -149,7 +155,7 @@ def teme2geodetic_spherical(x, y, z, t):
     lon = atan2(y, x) - gmst # lambda-E
     alt = sqrt(x*x + y*y + z*z) - RE # h
 
-    return lat*180/pi, lon*180/pi, alt
+    return lat*RAD2DEG, lon*RAD2DEG, alt
 
 def teme2geodetic_oblate(x, y, z, t, ellipsoid):
     """
@@ -198,7 +204,7 @@ def teme2geodetic_oblate(x, y, z, t, ellipsoid):
 
     lon = atan2(y, x) - gmst # lambda-E
 
-    return phi*180/pi, lon*180/pi, h
+    return phi*RAD2DEG, lon*RAD2DEG, h
 
 def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
     """
