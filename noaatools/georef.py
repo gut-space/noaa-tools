@@ -376,18 +376,18 @@ def georef(imgname, tle1, tle2, aos, los):
     aos2 = teme2geodetic_oblate(pos1[0], pos1[1], pos1[2], d1, ellipsoid_wgs84)
     aos3 = teme2geodetic_pymap3d(pos1[0], pos1[1], pos1[2], d1)
 
-    print("METHOD 1 (spherical Earth): converted to LLA is long=%f lat=%f alt=%f" % (aos1[0], aos1[1], aos1[2]) )
-    print("METHOD 2 (oblate Earth):    converted to LLA is long=%f lat=%f alt=%f" % (aos2[0], aos2[1], aos2[2]) )
-    print("METHOD 3 (pymap3d):         converted to LLA is long=%f lat=%f alt=%f" % (aos3[0], aos3[1], aos3[2]) )
+    print("METHOD 1 (spherical Earth): converted to LLA is lat=%f long=%f alt=%f" % (aos1[0], aos1[1], aos1[2]) )
+    print("METHOD 2 (oblate Earth):    converted to LLA is lat=%f long=%f alt=%f" % (aos2[0], aos2[1], aos2[2]) )
+    print("METHOD 3 (pymap3d):         converted to LLA is lat=%f long=%f alt=%f" % (aos3[0], aos3[1], aos3[2]) )
 
 
     los1 = teme2geodetic_spherical(pos2[0], pos2[1], pos2[2], d2)
     los2 = teme2geodetic_oblate(pos2[0], pos2[1], pos2[2], d2, ellipsoid_wgs84)
     los3 = teme2geodetic_pymap3d(pos2[0], pos2[1], pos2[2], d2)
 
-    print("METHOD 1 (spherical Earth): converted to LLA is long=%f lat=%f alt=%f" % (los1[0], los1[1], los1[2]))
-    print("METHOD 1 (oblate Earth):    converted to LLA is long=%f lat=%f alt=%f" % (los2[0], los2[1], los2[2]))
-    print("METHOD 1 (pymap3d):         converted to LLA is long=%f lat=%f alt=%f" % (los3[0], los3[1], los3[2]))
+    print("METHOD 1 (spherical Earth): converted to LLA is lat=%f long=%f alt=%f" % (los1[0], los1[1], los1[2]))
+    print("METHOD 2 (oblate Earth):    converted to LLA is lat=%f long=%f alt=%f" % (los2[0], los2[1], los2[2]))
+    print("METHOD 3 (pymap3d):         converted to LLA is lat=%f long=%f alt=%f" % (los3[0], los3[1], los3[2]))
 
     # Ok, we have the sat position in LLA format. Getting sub-satellite point is trivial. Just assume altitude is 0.
     aos1 = get_ssp(aos1)
