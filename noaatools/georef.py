@@ -131,6 +131,14 @@ def julianDateToGMST2(jd, fr):
     theta_dot = (1.0 + dg * _second / 36525.0) * tau
     return theta, theta_dot
 
+def longitude_trunc(lon):
+    """ Makes sure the longitude is within -2*pi ... 2*pi range """
+    if (lon < -pi):
+        lon += 2*pi
+    if (lon > pi):
+        lon -= 2*pi
+    return lon
+
 def teme2geodetic_spherical(x, y, z, t):
     """
     Converts ECI coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).
@@ -147,12 +155,13 @@ def teme2geodetic_spherical(x, y, z, t):
     """
 
     jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
-    gmst = julianDateToGMST(jd, fr)
+    gmst = julianDateToGMST2(jd, fr)[0]
 
     RE = 6378.137 # Earth radius (in km)
 
     lat = atan2(z, sqrt(x*x + y*y)) # phi
     lon = atan2(y, x) - gmst # lambda-E
+    lon = longitude_trunc(lon)
     alt = sqrt(x*x + y*y + z*z) - RE # h
 
     return lat*RAD2DEG, lon*RAD2DEG, alt
@@ -200,9 +209,10 @@ def teme2geodetic_oblate(x, y, z, t, ellipsoid):
         phii=phi
 
     jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
-    gmst = julianDateToGMST(jd, fr)
+    gmst = julianDateToGMST2(jd, fr)[0]
 
     lon = atan2(y, x) - gmst # lambda-E
+    lon = longitude_trunc(lon)
 
     return phi*RAD2DEG, lon*RAD2DEG, h
 
