@@ -92,3 +92,4 @@ georef(filename, tle1, tle2, aos, los)
 * wxtoimg man page: https://wxtoimgrestored.xyz/support/wxtoimg.pdf
 * Cesium support for displaying a single image is confusing. https://www.cesium.com/docs/cesiumjs-ref-doc/SingleTileImageryProvider.html
 * PROJ4 (recommended by @fivitti): https://github.com/pyproj4/pyproj
+* https://github.com/Alexander-Barth/APTDecoder.jl
