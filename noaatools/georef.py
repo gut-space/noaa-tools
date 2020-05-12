@@ -426,6 +426,18 @@ def georef(imgname, tle1, tle2, aos, los):
     #    traverse half the distance in each way to find two corners of the image.
     #
     # 4. Repreat step 3, but use LOS SSP. This will find the remaining two corners of the image.
+    #
+    # Alternative algorithm:
+    # 1. calculate satellite flight azimuth AZ
+    #    https://en.wikipedia.org/wiki/Great-circle_navigation
+    # 2. calculate directions that are perpendicular (+90, -90 degrees) AZ_L, AZ_R
+    #    (basic math, add/subtract 90 degrees, modulo 360)
+    # 3. calculate sensor swath (left-right "width" of the observation), divite by 2 to get D
+    #    - SMAD
+    #    - WERTZ Mission Geometry
+    # 4. calculate terminal distance starting from SSP at the azimuth AZ_L and AZ_R and distance D
+    #    https://www.fcc.gov/media/radio/find-terminal-coordinates
+    #    https://stackoverflow.com/questions/877524/calculating-coordinates-given-a-bearing-and-a-distance
 
     # STEP 4: Do we need to detect if it's northbound or southbound fly-over? We can do it easily, by
     # comparing aos_lat (lla1[1]) with los_lat (lla2[1])
