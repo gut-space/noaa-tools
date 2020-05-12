@@ -20,9 +20,10 @@ USAGE = '''
 '''
 
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from collections import namedtuple
-from math import atan, atan2, sqrt, pi, sin, cos
+from math import atan, atan2, sqrt, pi, sin, cos, asin, acos
+from enum import Enum
 
 from sgp4.io import twoline2rv
 from sgp4.earth_gravity import wgs72, wgs84
@@ -32,6 +33,11 @@ import numpy as np
 from pymap3d import ecef
 
 from export_czml import *
+
+class Methods(Enum):
+    SPHERICAL = 1
+    OBLATE = 2
+    PYMAP3D = 3
 
 # Conversion between radians and degrees
 DEG2RAD = 0.017453292519943296
@@ -239,6 +245,30 @@ def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
 def get_ssp(lla):
     return [ lla[0], lla[1], 0 ]
 
+def calc_azimuth(p1, p2):
+    """ Calculates azimuth from point 1 to point 2.
+    Point - an array 3 of floats (LLA)
+    Returns azimuth in degrees
+
+    Source: http://edwilliams.org/avform.htm#Crs
+    """
+
+    lat1 = p1[0] * DEG2RAD
+    lon1 = -p1[1] * DEG2RAD
+    lat2 = p2[0] * DEG2RAD
+    lon2 = -p2[1] * DEG2RAD
+
+    d = 2*asin(sqrt((sin((lat1-lat2)/2))**2 +  cos(lat1)*cos(lat2)*(sin((lon1-lon2)/2))**2))
+
+    tc1 = acos((sin(lat2)-sin(lat1)*cos(d))/(sin(d)*cos(lat1)))
+
+    tc1 = atan2(sin(lon1-lon2)*cos(lat2), cos(lat1)*sin(lat2)-sin(lat1)*cos(lat2)*cos(lon1-lon2))
+    if (tc1 < 0):
+        tc1 += 2*pi
+    if (tc1 > 2*pi):
+        tc1 -= 2*pi
+    return tc1*RAD2DEG
+
 def georef(imgname, tle1, tle2, aos, los):
     """ This is a naive georeferencing method:
         - calculates the sat location at AOS and LOS points (using )
@@ -269,6 +299,12 @@ def georef(imgname, tle1, tle2, aos, los):
     _, pos1, _ = sat.sgp4(jd1, fr1) # returns error, position and velocity - we care about position only
     _, pos2, _ = sat.sgp4(jd2, fr2)
 
+    # Delta between a point and a point+delta (the second delta point is used to calculate azimuth)
+    DELTA = 30.0
+
+    _, pos1delta, _ = sat.sgp4(jd1, fr1 + DELTA/86400)
+    _, pos2delta, _ = sat.sgp4(jd1, fr1 + DELTA/86400)
+
     # STEP 2: Calculate sub-satellite point at AOS, LOS times
     # T.S. Kelso saves the day *again*: see here: https://celestrak.com/columns/v02n03/
 
@@ -289,6 +325,26 @@ def georef(imgname, tle1, tle2, aos, los):
     print("METHOD 2 (oblate Earth):    converted to LLA is lat=%f long=%f alt=%f" % (aos2[0], aos2[1], aos2[2]) )
     print("METHOD 3 (pymap3d):         converted to LLA is lat=%f long=%f alt=%f" % (aos3[0], aos3[1], aos3[2]) )
 
+    d1delta = d1 + timedelta(seconds = 30.0)
+
+    print(d1)
+    print(d1delta)
+
+    aos1bis = teme2geodetic_spherical(pos1delta[0], pos1delta[1], pos1delta[2], d1delta)
+    aos2bis = teme2geodetic_oblate(pos1delta[0], pos1delta[1], pos1delta[2], d1delta, ellipsoid_wgs84)
+    aos3bis = teme2geodetic_pymap3d(pos1delta[0], pos1delta[1], pos1delta[2], d1delta)
+
+    print("METHOD 1 (spherical Earth): BIS converted to LLA is lat=%f long=%f alt=%f" % (aos1bis[0], aos1bis[1], aos1bis[2]) )
+    print("METHOD 2 (oblate Earth):    BIS converted to LLA is lat=%f long=%f alt=%f" % (aos2bis[0], aos2bis[1], aos2bis[2]) )
+    print("METHOD 3 (pymap3d):         BIS converted to LLA is lat=%f long=%f alt=%f" % (aos3bis[0], aos3bis[1], aos3bis[2]) )
+
+    az1 = calc_azimuth(aos1, aos1bis)
+    az2 = calc_azimuth(aos2, aos2bis)
+    az3 = calc_azimuth(aos3, aos3bis)
+
+    print("METHOD1 azimuth = %f" % az1)
+    print("METHOD2 azimuth = %f" % az2)
+    print("METHOD3 azimuth = %f" % az3)
 
     los1 = teme2geodetic_spherical(pos2[0], pos2[1], pos2[2], d2)
     los2 = teme2geodetic_oblate(pos2[0], pos2[1], pos2[2], d2, ellipsoid_wgs84)
