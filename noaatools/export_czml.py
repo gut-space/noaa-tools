@@ -15,21 +15,21 @@ def cesium_preamble():
 
     return code
 
-def export2cesium_point(lla, name):
+def export2cesium_point(lla, name, color = "RED"):
     """
     Exports specified LLA coordinates to filename, using name as a label.
     """
 
     code = """
     var questionPin = viewer.entities.add({
-        name : '%s',
+        name : '%s lat=%f,lon=%f',
         position : Cesium.Cartesian3.fromDegrees(%f, %f, %f),
         billboard : {
-            image : pinBuilder.fromText('%s', Cesium.Color.RED, 48).toDataURL(),
+            image : pinBuilder.fromText('%s', Cesium.Color.%s, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
-    """ % (name, lla[0], lla[1], lla[2], name[0])
+    """ % (name, lla[0], lla[1], lla[1], lla[0], lla[2], name[0], color)
 
     return code
 
@@ -106,22 +106,22 @@ def export2cesium(outfile, imgfile, aos, los, aos_list, los_list, methods, tle1,
 
     for i in range(0, len(methods)):
         txt += " // points %d out of %d" % (i, len(methods))
-        txt += export2cesium_point(aos_list[i], "AOS:" + str(aos) + ", method " + methods[i])
-        txt += export2cesium_point(los_list[i], "LOS:" + str(los) + ", method " + methods[i])
+        txt += export2cesium_point(aos_list[i], "AOS(%s)" % methods[i], "RED")
+        txt += export2cesium_point(los_list[i], "LOS(%s)" % methods[i], "GREEN")
 
     # Export corners
     if corner_ul:
         corner_ul = expand3d(corner_ul)
-        txt += export2cesium_point(corner_ul, "Upper Left corner")
+        txt += export2cesium_point(corner_ul, "Upper Left corner", "BLUE")
     if corner_ur:
         corner_ur = expand3d(corner_ur)
-        txt += export2cesium_point(corner_ur, "Upper Right corner")
+        txt += export2cesium_point(corner_ur, "Upper Right corner", "BLUE")
     if corner_ll:
         corner_ll = expand3d(corner_ll)
-        txt += export2cesium_point(corner_ll, "Lower Left corner")
+        txt += export2cesium_point(corner_ll, "Lower Left corner", "BLUE")
     if corner_lr:
         corner_lr = expand3d(corner_lr)
-        txt += export2cesium_point(corner_lr, "Lower Right corner")
+        txt += export2cesium_point(corner_lr, "Lower Right corner", "BLUE")
 
     f = open(outfile, "w")
     f.write(txt)
