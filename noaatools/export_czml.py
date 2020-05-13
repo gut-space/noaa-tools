@@ -74,7 +74,14 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
 
     return txt
 
-def export2cesium(outfile, imgfile, aos, los, aos_list, los_list, methods, tle1, tle2):
+def expand3d(pt):
+    """ Expand specified point to be full LLA (latitude, longitude, altitude), even if only lon, lat was specified """
+    if (len(pt) == 3):
+        return pt
+    return pt[0], pt[1], 0.0
+
+def export2cesium(outfile, imgfile, aos, los, aos_list, los_list, methods, tle1, tle2,
+                  corner_ul, corner_ur, corner_ll, corner_lr):
     """
     Exports all data to JavaScript that's usable with Cesium.
 
@@ -101,6 +108,20 @@ def export2cesium(outfile, imgfile, aos, los, aos_list, los_list, methods, tle1,
         txt += " // points %d out of %d" % (i, len(methods))
         txt += export2cesium_point(aos_list[i], "AOS:" + str(aos) + ", method " + methods[i])
         txt += export2cesium_point(los_list[i], "LOS:" + str(los) + ", method " + methods[i])
+
+    # Export corners
+    if corner_ul:
+        corner_ul = expand3d(corner_ul)
+        txt += export2cesium_point(corner_ul, "Upper Left corner")
+    if corner_ur:
+        corner_ur = expand3d(corner_ur)
+        txt += export2cesium_point(corner_ur, "Upper Right corner")
+    if corner_ll:
+        corner_ll = expand3d(corner_ll)
+        txt += export2cesium_point(corner_ll, "Lower Left corner")
+    if corner_lr:
+        corner_lr = expand3d(corner_lr)
+        txt += export2cesium_point(corner_lr, "Lower Right corner")
 
     f = open(outfile, "w")
     f.write(txt)
