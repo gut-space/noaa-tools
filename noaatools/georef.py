@@ -338,7 +338,7 @@ def georef(imgname, tle1, tle2, aos, los):
     DELTA = 30.0
 
     _, pos1delta, _ = sat.sgp4(jd1, fr1 + DELTA/86400)
-    _, pos2delta, _ = sat.sgp4(jd1, fr1 + DELTA/86400)
+    _, pos2delta, _ = sat.sgp4(jd2, fr2 + DELTA/86400)
 
     # STEP 2: Calculate sub-satellite point at AOS, LOS times
     # T.S. Kelso saves the day *again*: see here: https://celestrak.com/columns/v02n03/
@@ -357,9 +357,9 @@ def georef(imgname, tle1, tle2, aos, los):
     aos2 = teme2geodetic_oblate(pos1[0], pos1[1], pos1[2], d1, ellipsoid_wgs84)
     aos3 = teme2geodetic_pymap3d(pos1[0], pos1[1], pos1[2], d1)
 
-    print("METHOD 1 (spherical Earth): converted to LLA is lat=%f long=%f alt=%f" % (aos1[0], aos1[1], aos1[2]) )
-    print("METHOD 2 (oblate Earth):    converted to LLA is lat=%f long=%f alt=%f" % (aos2[0], aos2[1], aos2[2]) )
-    print("METHOD 3 (pymap3d):         converted to LLA is lat=%f long=%f alt=%f" % (aos3[0], aos3[1], aos3[2]) )
+    print("METHOD 1 (spherical Earth): AOS converted to LLA is lat=%f long=%f alt=%f" % (aos1[0], aos1[1], aos1[2]) )
+    print("METHOD 2 (oblate Earth):    AOS converted to LLA is lat=%f long=%f alt=%f" % (aos2[0], aos2[1], aos2[2]) )
+    print("METHOD 3 (pymap3d):         AOS converted to LLA is lat=%f long=%f alt=%f" % (aos3[0], aos3[1], aos3[2]) )
 
     # Let's use a point 30 seconds later. AOS and (AOS + 30s) will determine the azimuth
     d1delta = d1 + timedelta(seconds = 30.0)
@@ -390,9 +390,9 @@ def georef(imgname, tle1, tle2, aos, los):
     los2 = teme2geodetic_oblate(pos2[0], pos2[1], pos2[2], d2, ellipsoid_wgs84)
     los3 = teme2geodetic_pymap3d(pos2[0], pos2[1], pos2[2], d2)
 
-    print("METHOD 1 (spherical Earth): converted to LLA is lat=%f long=%f alt=%f" % (los1[0], los1[1], los1[2]))
-    print("METHOD 2 (oblate Earth):    converted to LLA is lat=%f long=%f alt=%f" % (los2[0], los2[1], los2[2]))
-    print("METHOD 3 (pymap3d):         converted to LLA is lat=%f long=%f alt=%f" % (los3[0], los3[1], los3[2]))
+    print("METHOD 1 (spherical Earth): LOS converted to LLA is lat=%f long=%f alt=%f" % (los1[0], los1[1], los1[2]))
+    print("METHOD 2 (oblate Earth):    LOS converted to LLA is lat=%f long=%f alt=%f" % (los2[0], los2[1], los2[2]))
+    print("METHOD 3 (pymap3d):         LOS converted to LLA is lat=%f long=%f alt=%f" % (los3[0], los3[1], los3[2]))
 
     # Let's use a point 30 seconds later. AOS and (AOS + 30s) will determine the azimuth
     d2delta = d2 + timedelta(seconds = 30.0)
@@ -400,17 +400,21 @@ def georef(imgname, tle1, tle2, aos, los):
     los1bis = teme2geodetic_spherical(pos2delta[0], pos2delta[1], pos2delta[2], d2delta)
     los2bis = teme2geodetic_oblate(pos2delta[0], pos2delta[1], pos2delta[2], d2delta, ellipsoid_wgs84)
     los3bis = teme2geodetic_pymap3d(pos2delta[0], pos2delta[1], pos2delta[2], d2delta)
-    az1 = calc_azimuth(los1, los1bis)
-    az2 = calc_azimuth(los2, los2bis)
-    az3 = calc_azimuth(los3, los3bis)
+    print("METHOD 1 (spherical Earth): LOSbis converted to LLA is lat=%f long=%f alt=%f" % (los1bis[0], los1bis[1], los1bis[2]))
+    print("METHOD 2 (oblate Earth):    LOSbis converted to LLA is lat=%f long=%f alt=%f" % (los2bis[0], los2bis[1], los2bis[2]))
+    print("METHOD 3 (pymap3d):         LOSbis converted to LLA is lat=%f long=%f alt=%f" % (los3bis[0], los3bis[1], los3bis[2]))
 
-    print("METHOD1 LOS azimuth = %f" % az1)
-    print("METHOD2 LOS azimuth = %f" % az2)
-    print("METHOD3 LOS azimuth = %f" % az3)
+    az1los = calc_azimuth(los1, los1bis)
+    az2los = calc_azimuth(los2, los2bis)
+    az3los = calc_azimuth(los3, los3bis)
+
+    print("METHOD1 LOS azimuth = %f" % az1los)
+    print("METHOD2 LOS azimuth = %f" % az2los)
+    print("METHOD3 LOS azimuth = %f" % az3los)
 
     # Now calculate corner positions (use only the first method)
-    corner_ll = radial_distance(los1[0], los1[1], az1 + 90, calculate_swath(los1[2], avhrr_angle / 2.0 ))
-    corner_lr = radial_distance(los1[0], los1[1], az1 - 90, calculate_swath(los1[2], avhrr_angle / 2.0 ))
+    corner_ll = radial_distance(los1[0], los1[1], az1los + 90, calculate_swath(los1[2], avhrr_angle / 2.0 ))
+    corner_lr = radial_distance(los1[0], los1[1], az1los - 90, calculate_swath(los1[2], avhrr_angle / 2.0 ))
     print("METHOD1 Lower left corner:  lat=%f lon=%f" % (corner_ll[0], corner_ll[1]))
     print("METHOD1 Lower right corner: lat=%f lon=%f" % (corner_lr[0], corner_lr[1]))
 
