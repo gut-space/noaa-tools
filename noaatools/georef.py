@@ -22,7 +22,7 @@ USAGE = '''
 import sys
 from datetime import datetime, timezone, timedelta
 from collections import namedtuple
-from math import atan, atan2, sqrt, pi, sin, cos, asin, acos
+from math import atan, atan2, sqrt, pi, sin, cos, asin, acos, tan
 from enum import Enum
 
 from sgp4.io import twoline2rv
@@ -269,12 +269,33 @@ def calc_azimuth(p1, p2):
         tc1 -= 2*pi
     return tc1*RAD2DEG
 
-def calculate_swath(alt, deg):
-    """This calculates the swath width, given the altitude of the sat and camera angle.
+def calculate_swath(alt, nu):
+    """This calculates the swath width, given the altitude (alt) of the sat and camera angle (nu, in radians).
         Returns swath in km"""
 
-    # TODO
-    return 200
+    nu = nu*DEG2RAD
+
+    # Ok, this is an overly simplified approximation. It neglects the Earth curvature.
+    swath = alt*tan(nu)
+    print("##### swath = %f" % swath)
+    return swath
+
+    # See Wertz "mission geometry", pg. 420.
+    print("alt=%f nu=%f, RE=%f" % (alt, nu, RE))
+
+    # Something is clearly broken down here.
+    rho = asin(RE/(RE+alt))
+
+    epsilon = acos(sin(nu)/sin(rho))
+
+    lambd = pi/2 - rho - epsilon
+
+    swath = RE*lambd
+
+    print("#### rho=%f epsilon=%f lambda=%f swath=%f" % (rho, epsilon, lambd, swath))
+    print("#### rho=%f epsilon=%f lambda=%f swath=%f" % (rho*RAD2DEG, epsilon*RAD2DEG, lambd*RAD2DEG, swath))
+
+    return swath
 
 def radial_distance(lat1, lon1, bearing, distance):
     """
@@ -284,6 +305,8 @@ def radial_distance(lat1, lon1, bearing, distance):
     Based on this:
     https://stackoverflow.com/questions/877524/calculating-coordinates-given-a-bearing-and-a-distance
     """
+
+    print("####radial_distance(%f, %f, %f, %f)" % (lat1, lon1, bearing, distance))
 
     rlat1 = lat1*DEG2RAD
     rlon1 = lon1*DEG2RAD
@@ -297,6 +320,7 @@ def radial_distance(lat1, lon1, bearing, distance):
     else:
         rlon = ( (rlon1 + asin( sin(rbearing)* sin(rdistance) / cos(rlat) ) + pi ) % (2*pi) ) - pi
 
+    print("#### lat=%f, lon=%f" % (rlat*RAD2DEG, rlon*RAD2DEG))
     return (rlat*RAD2DEG, rlon*RAD2DEG)
 
 def azimuth_add(az, delta):
@@ -351,8 +375,6 @@ def georef(imgname, tle1, tle2, aos, los):
     # - using pymap3d lib (which is most precise)
 
     # AOS calc
-    print("AOS: ECI[x=%f, y=%f, z=%f]" % (pos1[0], pos1[1], pos1[2]))
-
     aos1 = teme2geodetic_spherical(pos1[0], pos1[1], pos1[2], d1)
     aos2 = teme2geodetic_oblate(pos1[0], pos1[1], pos1[2], d1, ellipsoid_wgs84)
     aos3 = teme2geodetic_pymap3d(pos1[0], pos1[1], pos1[2], d1)
@@ -379,8 +401,8 @@ def georef(imgname, tle1, tle2, aos, los):
     avhrr_angle = 54.3
 
     # Now calculate corner positions (use only the first method)
-    corner_ul = radial_distance(aos1[0], aos1[1], az1 + 90, calculate_swath(aos1[2], avhrr_angle / 2.0 ))
-    corner_ur = radial_distance(aos1[0], aos1[1], az1 - 90, calculate_swath(aos1[2], avhrr_angle / 2.0 ))
+    corner_ul = radial_distance(aos1[0], aos1[1], az1 + 90, calculate_swath(aos1[2], avhrr_angle ))
+    corner_ur = radial_distance(aos1[0], aos1[1], az1 - 90, calculate_swath(aos1[2], avhrr_angle ))
 
     print("METHOD1 Upper left corner:  lat=%f lon=%f" % (corner_ul[0], corner_ul[1]))
     print("METHOD1 Upper right corner: lat=%f lon=%f" % (corner_ur[0], corner_ur[1]))
@@ -413,8 +435,8 @@ def georef(imgname, tle1, tle2, aos, los):
     print("METHOD3 LOS azimuth = %f" % az3los)
 
     # Now calculate corner positions (use only the first method)
-    corner_ll = radial_distance(los1[0], los1[1], az1los + 90, calculate_swath(los1[2], avhrr_angle / 2.0 ))
-    corner_lr = radial_distance(los1[0], los1[1], az1los - 90, calculate_swath(los1[2], avhrr_angle / 2.0 ))
+    corner_ll = radial_distance(los1[0], los1[1], az1los + 90, calculate_swath(los1[2], avhrr_angle ))
+    corner_lr = radial_distance(los1[0], los1[1], az1los - 90, calculate_swath(los1[2], avhrr_angle ))
     print("METHOD1 Lower left corner:  lat=%f lon=%f" % (corner_ll[0], corner_ll[1]))
     print("METHOD1 Lower right corner: lat=%f lon=%f" % (corner_lr[0], corner_lr[1]))
 

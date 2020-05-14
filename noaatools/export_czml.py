@@ -2,6 +2,7 @@ from tletools import TLE
 # This is needed to export orbit to CZML format (Cesium)
 from poliastro.czml.extract_czml import CZMLExtractor
 from astropy import time
+from datetime import timezone, timedelta
 
 def cesium_preamble():
     code = """
@@ -48,9 +49,15 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
     orb = tle.to_orbit()
 
     sample_points = 10
+    aos.replace(tzinfo=timezone.utc)
+    aos += timedelta(hours=0)
+    los += timedelta(hours=0)
 
     aos_astropy = time.Time(aos, scale="utc")
     los_astropy = time.Time(los, scale="utc")
+
+    print("#### export2cesium AOS=%s/%s" % (aos, aos_astropy))
+    print("#### export2cesium LOS=%s/%s" % (los, los_astropy))
 
     extractor = CZMLExtractor(aos_astropy, los_astropy, sample_points)
     extractor.add_orbit(orb, path_show=True, path_width=3, path_color=[125, 80, 120, 255], label_text=satname)
@@ -67,8 +74,8 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
     # This is how it looks like:  "availability": "2020-04-12T09:01:03Z/2020-04-12T09:17:06Z",
     # This is how it SHOULD look: "availability": "2020-04-12T09:01:03/2020-04-12T09:17:06",
 
-    txt = txt.replace("Z/", "/") # replace Z/ with /
-    txt = txt.replace('Z"', '"') # replace Z" with "
+    #txt = txt.replace("Z/", "/") # replace Z/ with /
+    #txt = txt.replace('Z"', '"') # replace Z" with "
 
     txt += "var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml));"
 
