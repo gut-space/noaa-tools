@@ -119,16 +119,16 @@ def export2cesium(outfile, imgfile, aos, los, aos_list, los_list, methods, tle1,
     # Export corners
     if corner_ul:
         corner_ul = expand3d(corner_ul)
-        txt += export2cesium_point(corner_ul, "Upper Left corner", "BLUE")
+        txt += export2cesium_point(corner_ul, "Upper Left", "BLUE")
     if corner_ur:
         corner_ur = expand3d(corner_ur)
-        txt += export2cesium_point(corner_ur, "Upper Right corner", "BLUE")
+        txt += export2cesium_point(corner_ur, "Upper Right", "BLUE")
     if corner_ll:
         corner_ll = expand3d(corner_ll)
-        txt += export2cesium_point(corner_ll, "Lower Left corner", "BLUE")
+        txt += export2cesium_point(corner_ll, "Lower Left", "BLUE")
     if corner_lr:
         corner_lr = expand3d(corner_lr)
-        txt += export2cesium_point(corner_lr, "Lower Right corner", "BLUE")
+        txt += export2cesium_point(corner_lr, "Lower Right", "BLUE")
 
     f = open(outfile, "w")
     f.write(txt)
