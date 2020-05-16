@@ -32,7 +32,8 @@ from sgp4.api import jday, Satrec
 import numpy as np
 from pymap3d import ecef
 
-from noaatools.export_czml import *
+sys.path.append('.')
+from noaatools import export_czml
 
 class Method(Enum):
     SPHERICAL = 1
@@ -483,7 +484,7 @@ def georef(imgname, tle1, tle2, aos, los):
     # BUG: For some reason the anomaly is off by could degrees that's roughly equivalent to 5 minutes time.
     delta = timedelta(minutes=5)
 
-    export2cesium(outfile, imgname, d1 - delta, d2 - delta, aos_list, los_list, methods, tle1, tle2, corner_ul, corner_ur, corner_ll, corner_lr)
+    export_czml.export2cesium(outfile, imgname, d1 - delta, d2 - delta, aos_list, los_list, methods, tle1, tle2, corner_ul, corner_ur, corner_ll, corner_lr)
 
     # STEP 6: (possibly outside of this script):
     # - use GDAL library to georeference image (https://pcjericks.github.io/py-gdalogr-cookbook/)
@@ -505,6 +506,7 @@ if __name__ == "__main__":
         "denoise": False,
         "georef": True # Georeference
     }
+
 
     # Let's ignore input parameters and pretend we were asked to georeference observation #1276.
     #if len(sys.argv) < 5:
