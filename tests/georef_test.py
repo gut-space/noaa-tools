@@ -48,9 +48,10 @@ class Georefests(unittest.TestCase):
                 print("Checking case for jd=%f expected=%f noaatools=%f (diff=%f)" % (case[0], exp, act, abs(exp - act)) )
                 self.assertAlmostEqual(exp, act)
 
-
     def test_calc_distance(self):
         self.assertAlmostEqual(georef.calc_distance(54, 18, 54, 19), 65.43141141)
         self.assertAlmostEqual(georef.calc_distance(54, 18, 54, 17), 65.43141141)
         self.assertAlmostEqual(georef.calc_distance(54, 18, 53, 18), 111.31949079)
         self.assertAlmostEqual(georef.calc_distance(54, 19, 55, 18), 128.72457677)
+        self.assertAlmostEqual(georef.calc_distance(54, 19, 51, 0), 1325.7042000) # Gdansk to London
+

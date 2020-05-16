@@ -32,9 +32,9 @@ from sgp4.api import jday, Satrec
 import numpy as np
 from pymap3d import ecef
 
-from export_czml import *
+from noaatools.export_czml import *
 
-class Methods(Enum):
+class Method(Enum):
     SPHERICAL = 1
     OBLATE = 2
     PYMAP3D = 3
@@ -57,7 +57,7 @@ ellipsoid_wgs84 = Ellipsoid(a = RE, finv = 298.257223563)
 # This is expressed in seconds.
 NOAA_PROCESSING_DELAY = 0.0
 
-#######################################################################################################
+#
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
 
@@ -269,31 +269,25 @@ def calc_azimuth(p1, p2):
         tc1 -= 2*pi
     return tc1*RAD2DEG
 
-def calculate_swath(alt, nu):
-    """This calculates the swath width, given the altitude (alt) of the sat and camera angle (nu, in radians).
+def calc_swath(alt, nu):
+    """This calculates the swath width, given the altitude (alt, in km) of the sat and camera angle (nu, in radians).
         Returns swath in km"""
 
+    # Convert to radians first.
     nu = nu*DEG2RAD
 
     # Ok, this is an overly simplified approximation. It neglects the Earth curvature.
-    swath = alt*tan(nu)
-    print("##### swath = %f" % swath)
-    return swath
+    # return alt*tan(nu)
 
-    # See Wertz "mission geometry", pg. 420.
+    # Source Wertz "Mission geometry", pg. 420.
     print("alt=%f nu=%f, RE=%f" % (alt, nu, RE))
 
-    # Something is clearly broken down here.
+    # rho is an angle between two lines: (sat - tangential to Earth) and (sat - Earth center)
     rho = asin(RE/(RE+alt))
 
     epsilon = acos(sin(nu)/sin(rho))
-
-    lambd = pi/2 - rho - epsilon
-
-    swath = RE*lambd
-
-    print("#### rho=%f epsilon=%f lambda=%f swath=%f" % (rho, epsilon, lambd, swath))
-    print("#### rho=%f epsilon=%f lambda=%f swath=%f" % (rho*RAD2DEG, epsilon*RAD2DEG, lambd*RAD2DEG, swath))
+    lam = pi/2 - rho - epsilon
+    swath = RE*lam
 
     return swath
 
@@ -305,8 +299,6 @@ def radial_distance(lat1, lon1, bearing, distance):
     Based on this:
     https://stackoverflow.com/questions/877524/calculating-coordinates-given-a-bearing-and-a-distance
     """
-
-    print("####radial_distance(%f, %f, %f, %f)" % (lat1, lon1, bearing, distance))
 
     rlat1 = lat1*DEG2RAD
     rlon1 = lon1*DEG2RAD
@@ -320,7 +312,6 @@ def radial_distance(lat1, lon1, bearing, distance):
     else:
         rlon = ( (rlon1 + asin( sin(rbearing)* sin(rdistance) / cos(rlat) ) + pi ) % (2*pi) ) - pi
 
-    print("#### lat=%f, lon=%f" % (rlat*RAD2DEG, rlon*RAD2DEG))
     return (rlat*RAD2DEG, rlon*RAD2DEG)
 
 def calc_distance(lat1, lon1, lat2, lon2):
@@ -414,8 +405,8 @@ def georef(imgname, tle1, tle2, aos, los):
     avhrr_angle = 54.3
 
     # Now calculate corner positions (use only the first method)
-    corner_ul = radial_distance(aos1[0], aos1[1], az1 + 90, calculate_swath(aos1[2], avhrr_angle ))
-    corner_ur = radial_distance(aos1[0], aos1[1], az1 - 90, calculate_swath(aos1[2], avhrr_angle ))
+    corner_ul = radial_distance(aos1[0], aos1[1], az1 + 90, calc_swath(aos1[2], avhrr_angle ))
+    corner_ur = radial_distance(aos1[0], aos1[1], az1 - 90, calc_swath(aos1[2], avhrr_angle ))
 
     print("METHOD1 Upper left corner:  lat=%f lon=%f" % (corner_ul[0], corner_ul[1]))
     print("METHOD1 Upper right corner: lat=%f lon=%f" % (corner_ur[0], corner_ur[1]))
@@ -448,8 +439,8 @@ def georef(imgname, tle1, tle2, aos, los):
     print("METHOD3 LOS azimuth = %f" % az3los)
 
     # Now calculate corner positions (use only the first method)
-    corner_ll = radial_distance(los1[0], los1[1], az1los + 90, calculate_swath(los1[2], avhrr_angle ))
-    corner_lr = radial_distance(los1[0], los1[1], az1los - 90, calculate_swath(los1[2], avhrr_angle ))
+    corner_ll = radial_distance(los1[0], los1[1], az1los + 90, calc_swath(los1[2], avhrr_angle ))
+    corner_lr = radial_distance(los1[0], los1[1], az1los - 90, calc_swath(los1[2], avhrr_angle ))
     print("METHOD1 Lower left corner:  lat=%f lon=%f" % (corner_ll[0], corner_ll[1]))
     print("METHOD1 Lower right corner: lat=%f lon=%f" % (corner_lr[0], corner_lr[1]))
 
@@ -464,25 +455,18 @@ def georef(imgname, tle1, tle2, aos, los):
 
     # STEP 3: Find image corners. Here's an algorithm proposal:
     #
-    # 1. Calculate the orthodromic distance (a great-circle distance) between AOS SSP and LOS SSP.
-    #    See https://en.wikipedia.org/wiki/Great-circle_distance
-    #
-    # 2. Find great circle that passes through AOS SSP and LOS SSP.
-    #
-    # 3. Find a great circle that passes through AOS SSP and is perpendicular to great circle found in step 2.
-    #    Calculate cross-track distance (use image's widht/height multiplied by the orthodromic distance in step 1),
-    #    traverse half the distance in each way to find two corners of the image.
-    #
-    # 4. Repreat step 3, but use LOS SSP. This will find the remaining two corners of the image.
-    #
-    # Alternative algorithm:
     # 1. calculate satellite flight azimuth AZ
     #    https://en.wikipedia.org/wiki/Great-circle_navigation
+    #    In addition to AOS and LOS subsatellite points, we calculate AOSbis and LOSbis, subsat points
+    #    after certain detla seconds. This is used to calculate azimuth
+    #
     # 2. calculate directions that are perpendicular (+90, -90 degrees) AZ_L, AZ_R
     #    (basic math, add/subtract 90 degrees, modulo 360)
+    #
     # 3. calculate sensor swath (left-right "width" of the observation), divite by 2 to get D
     #    - SMAD
-    #    - WERTZ Mission Geometry
+    #    - WERTZ Mission Geometry, page 420
+    #
     # 4. calculate terminal distance starting from SSP at the azimuth AZ_L and AZ_R and distance D
     #    https://www.fcc.gov/media/radio/find-terminal-coordinates
     #    https://stackoverflow.com/questions/877524/calculating-coordinates-given-a-bearing-and-a-distance
@@ -495,7 +479,11 @@ def georef(imgname, tle1, tle2, aos, los):
     aos_list = [ aos1, aos2, aos3 ]
     los_list = [ los1, los2, los3 ]
     methods  = [ "spherical", "oblate", "pymap3d" ]
-    export2cesium(outfile, imgname, d1, d2, aos_list, los_list, methods, tle1, tle2, corner_ul, corner_ur, corner_ll, corner_lr)
+
+    # BUG: For some reason the anomaly is off by could degrees that's roughly equivalent to 5 minutes time.
+    delta = timedelta(minutes=5)
+
+    export2cesium(outfile, imgname, d1 - delta, d2 - delta, aos_list, los_list, methods, tle1, tle2, corner_ul, corner_ur, corner_ll, corner_lr)
 
     # STEP 6: (possibly outside of this script):
     # - use GDAL library to georeference image (https://pcjericks.github.io/py-gdalogr-cookbook/)
@@ -526,10 +514,10 @@ if __name__ == "__main__":
     tle1 = '1 28654U 05018A   20098.54037539  .00000075  00000-0  65128-4 0  9992'
     tle2 = '2 28654  99.0522 154.2797 0015184  73.2195 287.0641 14.12501077766909'
 
-    aos = '2020-04-12 09:01:03.063476'
-    los = '2020-04-12 09:17:06.466954'
+    aos = '2020-04-12Z09:01:03.063476'
+    los = '2020-04-12Z09:17:06.466954'
 
-    georef("1276.png", tle1, tle2, aos, los)
+    georef("data/1276.png", tle1, tle2, aos, los)
 
 
 # This one is interesting.
