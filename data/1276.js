@@ -11,8 +11,8 @@
     "version": "1.0",
     "name": "document_packet",
     "clock": {
-        "interval": "2020-04-12T09:01:03.063/2020-04-12T09:17:06.467",
-        "currentTime": "2020-04-12T09:01:03",
+        "interval": "2020-04-12T08:56:03Z/2020-04-12T09:12:06Z",
+        "currentTime": "2020-04-12T08:56:03Z",
         "multiplier": 60,
         "range": "LOOP_STOP",
         "step": "SYSTEM_CLOCK_MULTIPLIER"
@@ -25,9 +25,9 @@
         "ellipsoid": [
             {
                 "array": [
-                    6378137.0,
-                    6378137.0,
-                    6356752.314245179
+                    6378136.6,
+                    6378136.6,
+                    6356751.9
                 ]
             }
         ],
@@ -39,61 +39,61 @@
 },
 {
     "id": 0,
-    "availability": "2020-04-12T09:01:03/2020-04-12T09:17:06",
+    "availability": "2020-04-12T08:56:03Z/2020-04-12T09:12:06Z",
     "position": {
-        "epoch": "2020-04-12T09:01:03.063",
+        "epoch": "2020-04-12T08:56:03Z",
         "interpolationAlgorithm": "LAGRANGE",
         "interpolationDegree": 5,
         "referenceFrame": "INERTIAL",
         "cartesian": [
             0.0,
-            2497796.7943112236,
-            -5267.4637026207,
-            6774129.2300034035,
+            546809.6949856463,
+            997167.3135742369,
+            7128330.303366815,
             96.3403478,
-            3082605.484606515,
-            -331714.630971391,
-            6521116.680282644,
+            1188103.644765849,
+            681079.352082901,
+            7087761.564471393,
             192.6806956,
-            3637145.9767669328,
-            -654904.8089422454,
-            6204072.367708097,
+            1817723.0522245967,
+            358298.7724538702,
+            6977545.958026942,
             289.0210434,
-            4155984.2504608897,
-            -971666.5618236214,
-            5826128.216822845,
+            2429484.5913164364,
+            31997.997493082,
+            6798779.905981012,
             385.3613912,
-            4634041.249626315,
-            -1278893.791563381,
-            5391013.587532978,
+            3017383.697285734,
+            -294617.2016414291,
+            6553235.350300109,
             481.701739,
-            5066642.6596350605,
-            -1573576.3845902157,
-            4903017.5635137595,
+            3575654.0392880384,
+            -618339.5775687741,
+            6243341.522087208,
             578.0420868,
-            5449564.500818173,
-            -1852829.8136067307,
-            4366945.753554468,
+            4098824.475112825,
+            -935992.2298880289,
+            5872160.12869854,
             674.3824346,
-            5779074.098392071,
-            -2113923.3992100493,
-            3788072.0768559477,
+            4581772.910096309,
+            -1244460.0508322448,
+            5443354.242960914,
             770.7227824,
-            6051966.042593345,
-            -2354306.953629566,
-            3172086.050718391,
+            5019776.520857897,
+            -1540720.471675621,
+            4961151.244429712,
             867.0631302,
-            6265592.809754187,
-            -2571635.5491272644,
-            2525036.13957301,
+            5408557.848776842,
+            -1821873.1988128214,
+            4430300.223215314,
             963.403478,
-            6417889.774265634,
-            -2763792.176230177,
-            1853269.757675314,
+            5744326.317360932,
+            -2085168.642480352,
+            3856024.311564967,
             1059.7438258,
-            6507394.402034201,
-            -2928908.081567771,
-            1163370.5438812037
+            6023814.781011917,
+            -2328034.7582685337,
+            3243968.4565759734
         ]
     },
     "billboard": {
@@ -145,8 +145,8 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
 
  // points 0 out of 3
     var questionPin = viewer.entities.add({
-        name : 'AOS:2020-04-12 09:01:03.063476+00:00, method spherical',
-        position : Cesium.Cartesian3.fromDegrees(79.859318, 40.585883, 0.000000),
+        name : 'AOS(spherical) lat=79.859318,lon=65.910315',
+        position : Cesium.Cartesian3.fromDegrees(65.910315, 79.859318, 0.000000),
         billboard : {
             image : pinBuilder.fromText('A', Cesium.Color.RED, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
@@ -154,17 +154,17 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
     });
     
     var questionPin = viewer.entities.add({
-        name : 'LOS:2020-04-12 09:17:06.466954+00:00, method spherical',
-        position : Cesium.Cartesian3.fromDegrees(28.223308, -18.162042, 0.000000),
+        name : 'LOS(spherical) lat=28.223308,lon=3.768348',
+        position : Cesium.Cartesian3.fromDegrees(3.768348, 28.223308, 0.000000),
         billboard : {
-            image : pinBuilder.fromText('L', Cesium.Color.RED, 48).toDataURL(),
+            image : pinBuilder.fromText('L', Cesium.Color.GREEN, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
      // points 1 out of 3
     var questionPin = viewer.entities.add({
-        name : 'AOS:2020-04-12 09:01:03.063476+00:00, method oblate',
-        position : Cesium.Cartesian3.fromDegrees(79.917969, 40.585883, 0.000000),
+        name : 'AOS(oblate) lat=79.917969,lon=65.910315',
+        position : Cesium.Cartesian3.fromDegrees(65.910315, 79.917969, 0.000000),
         billboard : {
             image : pinBuilder.fromText('A', Cesium.Color.RED, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
@@ -172,17 +172,17 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
     });
     
     var questionPin = viewer.entities.add({
-        name : 'LOS:2020-04-12 09:17:06.466954+00:00, method oblate',
-        position : Cesium.Cartesian3.fromDegrees(28.364909, -18.162042, 0.000000),
+        name : 'LOS(oblate) lat=28.364909,lon=3.768348',
+        position : Cesium.Cartesian3.fromDegrees(3.768348, 28.364909, 0.000000),
         billboard : {
-            image : pinBuilder.fromText('L', Cesium.Color.RED, 48).toDataURL(),
+            image : pinBuilder.fromText('L', Cesium.Color.GREEN, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
      // points 2 out of 3
     var questionPin = viewer.entities.add({
-        name : 'AOS:2020-04-12 09:01:03.063476+00:00, method pymap3d',
-        position : Cesium.Cartesian3.fromDegrees(79.999313, 66.591512, 0.000000),
+        name : 'AOS(pymap3d) lat=79.999313,lon=66.591512',
+        position : Cesium.Cartesian3.fromDegrees(66.591512, 79.999313, 0.000000),
         billboard : {
             image : pinBuilder.fromText('A', Cesium.Color.RED, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
@@ -190,10 +190,46 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
     });
     
     var questionPin = viewer.entities.add({
-        name : 'LOS:2020-04-12 09:17:06.466954+00:00, method pymap3d',
-        position : Cesium.Cartesian3.fromDegrees(28.471957, 4.010928, 0.000000),
+        name : 'LOS(pymap3d) lat=28.471957,lon=4.010928',
+        position : Cesium.Cartesian3.fromDegrees(4.010928, 28.471957, 0.000000),
         billboard : {
-            image : pinBuilder.fromText('L', Cesium.Color.RED, 48).toDataURL(),
+            image : pinBuilder.fromText('L', Cesium.Color.GREEN, 48).toDataURL(),
+            verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+        }
+    });
+    
+    var questionPin = viewer.entities.add({
+        name : 'Upper Left lat=83.597758,lon=47.775346',
+        position : Cesium.Cartesian3.fromDegrees(47.775346, 83.597758, 0.000000),
+        billboard : {
+            image : pinBuilder.fromText('U', Cesium.Color.BLUE, 48).toDataURL(),
+            verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+        }
+    });
+    
+    var questionPin = viewer.entities.add({
+        name : 'Upper Right lat=75.669464,lon=73.971107',
+        position : Cesium.Cartesian3.fromDegrees(73.971107, 75.669464, 0.000000),
+        billboard : {
+            image : pinBuilder.fromText('U', Cesium.Color.BLUE, 48).toDataURL(),
+            verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+        }
+    });
+    
+    var questionPin = viewer.entities.add({
+        name : 'Lower Left lat=29.310839,lon=-1.835953',
+        position : Cesium.Cartesian3.fromDegrees(-1.835953, 29.310839, 0.000000),
+        billboard : {
+            image : pinBuilder.fromText('L', Cesium.Color.BLUE, 48).toDataURL(),
+            verticalOrigin : Cesium.VerticalOrigin.BOTTOM
+        }
+    });
+    
+    var questionPin = viewer.entities.add({
+        name : 'Lower Right lat=26.912369,lon=9.248306',
+        position : Cesium.Cartesian3.fromDegrees(9.248306, 26.912369, 0.000000),
+        billboard : {
+            image : pinBuilder.fromText('L', Cesium.Color.BLUE, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
