@@ -323,6 +323,19 @@ def radial_distance(lat1, lon1, bearing, distance):
     print("#### lat=%f, lon=%f" % (rlat*RAD2DEG, rlon*RAD2DEG))
     return (rlat*RAD2DEG, rlon*RAD2DEG)
 
+def calc_distance(lat1, lon1, lat2, lon2):
+    """
+    Calculates distance between two (lat,lon) points. Return value is in km.
+    """
+    rlat1 = lat1*DEG2RAD
+    rlon1 = lon1*DEG2RAD
+    rlat2 = lat2*DEG2RAD
+    rlon2 = lon2*DEG2RAD
+
+    d = 2 * asin(sqrt((sin((rlat1-rlat2)/2))**2 + cos(rlat1)*cos(rlat2)*(sin((rlon1-rlon2)/2))**2))
+
+    return d * RE
+
 def azimuth_add(az, delta):
     """ Adds delta to specified azimuth. Does the modulo 360 arithmetic"""
 
