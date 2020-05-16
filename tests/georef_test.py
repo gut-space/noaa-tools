@@ -12,6 +12,7 @@ class Georefests(unittest.TestCase):
 
 
     def test_theta(self):
+        """This test verifies if julian date conversion to Greenwich Mean Sidreal Time is correct."""
 
         # Data generated using https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
         # for x in np.linspace(2458978.5, 2458980.5, 20):
@@ -40,7 +41,16 @@ class Georefests(unittest.TestCase):
 
         for case in expected:
             exp = case[1]
-            act = georef.julianDateToGMST(case[0], 0.0)
-            if type(act)is tuple:
+            act = georef.julianDateToGMST2(case[0], 0.0)
+            if type(act) is tuple:
                 act = act[0]
-            print("jd=%f expected=%f noaatools=%f (diff=%f)" % (case[0], exp, act, abs(exp-act)))
+            if (abs(exp - act) > 0.000004):
+                print("Checking case for jd=%f expected=%f noaatools=%f (diff=%f)" % (case[0], exp, act, abs(exp - act)) )
+                self.assertAlmostEqual(exp, act)
+
+
+    def test_calc_distance(self):
+        self.assertAlmostEqual(georef.calc_distance(54, 18, 54, 19), 65.43141141)
+        self.assertAlmostEqual(georef.calc_distance(54, 18, 54, 17), 65.43141141)
+        self.assertAlmostEqual(georef.calc_distance(54, 18, 53, 18), 111.31949079)
+        self.assertAlmostEqual(georef.calc_distance(54, 19, 55, 18), 128.72457677)
