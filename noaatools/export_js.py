@@ -1,3 +1,5 @@
+# This file contains routines that export data to JavaScript using Cesium
+
 from tletools import TLE
 # This is needed to export orbit to CZML format (Cesium)
 from poliastro.czml.extract_czml import CZMLExtractor

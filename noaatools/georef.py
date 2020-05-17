@@ -32,7 +32,7 @@ import numpy as np
 from pymap3d import ecef
 
 sys.path.append('.')
-from noaatools import export_czml
+from noaatools import export_js
 from noaatools.constants import *
 
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
