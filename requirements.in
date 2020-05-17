@@ -7,3 +7,5 @@ pymap3d
 tle-tools
 
 czml3
+
+poliastro == 0.14
