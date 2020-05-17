@@ -33,7 +33,7 @@ from pymap3d import ecef
 
 sys.path.append('.')
 from noaatools import export_js
-from noaatools.constants import *
+from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_ANGLE, ellipsoid_wgs84
 
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
@@ -194,7 +194,7 @@ def teme2geodetic_oblate(x: float, y: float, z: float, t: datetime, ellipsoid: E
     phii = 1 # This is the starting value for initial iteration
 
     # There should be a check on |phii - phi| value, but let's always do 5 iterations. Good enough for now.
-    for iter in range(1,5):
+    for _ in range(1,5):
 
         C = 1/(sqrt(1-e2*pow(sin(phii), 2)))
         # This is not explicitly stated on clestrak page, but it's shown on a diagram.
