@@ -1,7 +1,7 @@
 # This file contains routines that export data to JavaScript using Cesium
+# The exported file can be easily tested on https://sandcastle.cesium.com
 
 from tletools import TLE
-# This is needed to export orbit to CZML format (Cesium)
 from poliastro.czml.extract_czml import CZMLExtractor
 from astropy import time
 from datetime import timezone, timedelta
@@ -86,7 +86,7 @@ def expand3d(pt):
         return pt
     return pt[0], pt[1], 0.0
 
-def export2cesium(outfile, imgfile, aos_ts, los_ts, aos_lla, los_lla,
+def export2cesium(outfile, satname, aos_ts, los_ts, aos_lla, los_lla,
                   corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, text):
     """
     Exports all data to JavaScript that's usable with Cesium.
@@ -94,7 +94,7 @@ def export2cesium(outfile, imgfile, aos_ts, los_ts, aos_lla, los_lla,
     Parameters
     ==========
     outfile - output filename to write content to
-    imgfile - name of the input PNG file (currently not used yet)
+    satname - name of the input PNG file (currently not used yet)
     aos - aquisition of signal, in timedate format
     los - loss of signal, in timedate format
     lla_aos - an array of three coords that specify subsat point in LLA notation (longitude, lattitude, altitude)
@@ -104,7 +104,7 @@ def export2cesium(outfile, imgfile, aos_ts, los_ts, aos_lla, los_lla,
     """
 
     txt =  cesium_preamble()
-    txt += export2cesium_tle(tle1, tle2, "satname", aos_ts, los_ts)
+    txt += export2cesium_tle(tle1, tle2, satname, aos_ts, los_ts)
     txt += "\n\n"
 
     txt += export2cesium_point(aos_lla, "AOS(%s)" % text, "BLUE")
@@ -128,4 +128,4 @@ def export2cesium(outfile, imgfile, aos_ts, los_ts, aos_lla, los_lla,
     f.write(txt)
     f.close()
 
-    print("Georeference data exported to %s" % outfile)
+    print("Georeference data exported in JavaScript using Cesium format to %s" % outfile)

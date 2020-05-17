@@ -47,6 +47,7 @@ if __name__ == "__main__":
     aos = '2020-04-12Z09:01:03.063476'
     los = '2020-04-12Z09:17:06.466954'
 
+    satname = 'NOAA 18'
     imgname = 'data/1276.png'
 
     method = georef.Method.SPHERICAL
@@ -56,7 +57,7 @@ if __name__ == "__main__":
 
     # Now export the data to Cesium JavaScript
     outfile = ".".join(imgname.split('.')[:-1]) + ".js"
-    export_js.export2cesium(outfile, imgname, d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, method.name)
+    export_js.export2cesium(outfile, satname, d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, method.name)
 
     # STEP 6: (possibly outside of this script):
     # - use GDAL library to georeference image (https://pcjericks.github.io/py-gdalogr-cookbook/)
