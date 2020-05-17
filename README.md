@@ -52,8 +52,40 @@ process_img("tests/1276.png", params)
 ## Using from command line:
 
 ```bash
+python -m noaatools.noaatools --help
+
+usage: noaatools [-h] [--aos AOS] [--los LOS] [--tle1 TLE1] [--tle2 TLE2]
+                 [--method METHOD] [--satname SATNAME] [--file FILE]
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --aos AOS          Specify Acquision of Signal as timestamp (default:
+                     2020-04-12Z09:01:03.063476)
+  --los LOS          Specify Loss of signal as timestamp (default:
+                     2020-04-12Z09:17:06.466954)
+  --tle1 TLE1        First line of TLE (default: 1 28654U 05018A
+                     20098.54037539 .00000075 00000-0 65128-4 0 9992)
+  --tle2 TLE2        Second line of TLE (default: 2 28654 99.0522 154.2797
+                     0015184 73.2195 287.0641 14.12501077766909)
+  --method METHOD    Specify orbital position calculation method (SPHERICAL,
+                     OBLATE, PYMAP3D, default: PYMAP3D)
+  --satname SATNAME  Specifies satellite name (default: NOAA 18)
+  --file FILE        Specifies output file pattern (default: data/1276.png)
+```
+
+The tool will export data to files similar to the specified. When you specify 1276.png, the actual output files
+will be 1276.js and 1276.txt. By default this tool uses [satnogs observation 1276](https://satnogs.klub.com.pl/obs/1276)
+as sample data. That way you can easily run it without any parameters to quickly see how it works:
+
+```bash
 python -m noaatools.noaatools
 ```
+
+Currently there are three calculation method implemented:
+
+- spherical (the simplest and least accurate method. It assumes Earth is completely round)
+- oblate (this accounts for Earth oblateness, i.e. the bulge around equator)
+- pymap3d (this method is using [PYMAP3D](https://pypi.org/project/pymap3d/)'s eci2ecef and ecef2geodetic functions)
 
 ## Georeferencing
 
