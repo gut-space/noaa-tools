@@ -1,23 +1,4 @@
 # This script processes images received from NOAA satellites
-USAGE = '''
-#
-# noaa_process script
-#
-# Current capabilities:
-# - basic sanity checking (if the image is indeed NOAA observation)
-# - mark left and right images
-# - extract left and right images
-# - perform histogram stretch
-# - display images
-#
-# Usage:
-# python noaa_process.py filename.png tle.txt AOS LOS
-#
-# filename.png - this is a file that's decoded with noaa-apt
-# tle.txt - TLE information of the orbit
-# aos - aquisition of signal
-# los - loss of signal
-'''
 
 import sys
 from datetime import datetime, timezone, timedelta
@@ -463,6 +444,3 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     d2 -= delta
 
     return d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr
-
-def usage():
-    print(USAGE)
