@@ -87,6 +87,13 @@ Currently there are three calculation method implemented:
 - oblate (this accounts for Earth oblateness, i.e. the bulge around equator)
 - pymap3d (this method is using [PYMAP3D](https://pypi.org/project/pymap3d/)'s eci2ecef and ecef2geodetic functions)
 
+Currently there are two export methods implemented:
+
+- JavaScript - this generates a JavaScript code that is using Cesium. You can see the results easily by pasting the generated
+  file on https://sandcastle.cesium.com
+- CSV - Comma Separated File. This is a very flexible text format. You can import this data into OpenOffice, Microsoft Excel
+  or many other tools and environments
+
 ## Georeferencing
 
 Currently is being worked on. There's code in noaa_postproc/georef.py, but it doesn't work yet.
