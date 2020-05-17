@@ -24,6 +24,7 @@ from datetime import datetime, timezone, timedelta
 from collections import namedtuple
 from math import atan, atan2, sqrt, pi, sin, cos, asin, acos, tan
 from enum import Enum
+from typing import Tuple
 
 from sgp4.io import twoline2rv
 from sgp4.earth_gravity import wgs72, wgs84
@@ -58,7 +59,10 @@ ellipsoid_wgs84 = Ellipsoid(a = RE, finv = 298.257223563)
 # This is expressed in seconds.
 NOAA_PROCESSING_DELAY = 0.0
 
-#
+# This is the FOV (field of view) angle for the observation instrument on NOAA sats for each side.
+# In simple words this is how far the camera can look sideways. The total viewing angle is this multipled by 2.
+AVHRR_ANGLE = 54.3
+
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
 
@@ -94,7 +98,7 @@ def julianDateToGMST(jd, fr):
     # This is clearly broken.
     return (gmst % 24)*(15/3600.0)
 
-def julianDateToGMST2(jd, fr):
+def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
     """
     Converts Julian date (expressed at two floats) to GMST (Greenwich Mean Sidereal Time 1982).
 
@@ -104,7 +108,9 @@ def julianDateToGMST2(jd, fr):
 
     Returns
     =======
-    A single floating point representing a GMST, expressed in radians
+    A tuple with two values:
+    theta - single floating point representing a GMST, expressed in radians
+    theta_dot - unknown
 
     This calculation takes into consideration the precession, but not nutation.
 
@@ -137,17 +143,27 @@ def julianDateToGMST2(jd, fr):
     theta_dot = (1.0 + dg * _second / 36525.0) * tau
     return theta, theta_dot
 
-def longitude_trunc(lon):
-    """ Makes sure the longitude is within -2*pi ... 2*pi range """
-    if (lon < -pi):
-        lon += 2*pi
-    if (lon > pi):
-        lon -= 2*pi
-    return lon
-
-def teme2geodetic_spherical(x, y, z, t):
+def longitude_trunc(lon: float) -> float:
     """
-    Converts ECI coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).
+    Makes sure the longitude is within <-pi ... pi> range.
+
+    Parameters
+    ==========
+    lon - longitude expressed in radians (may be any value)
+
+    Returns
+    =======
+    normalized longitude in <-pi..pi> range. Note that both -pi and pi are accepted.
+    """
+
+    if (lon <= pi) and (lon >= -pi):
+        # Don't do any conversion if it's not necessary. Avoid conversion errors if necessary
+        return lon
+    return (lon + pi) % (2*pi) - pi
+
+def teme2geodetic_spherical(x: float, y: float, z: float, t: datetime):
+    """
+    Converts TEME/ECI coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).
     This function assumes the Earth is completely round.
 
     The calculations here are based on T.S. Kelso's excellent paper "Orbital Coordinate Systems, Part III
@@ -157,7 +173,12 @@ def teme2geodetic_spherical(x, y, z, t):
     ==========
     x,y,z : float - coordates in TEME (True Equator Mean Equinoex) version of ECI (Earth Centered Intertial) coords system.
             This is the system that's produced by SGP4 models.
-    jd, fr : float - julian date - expressed as two floats that should be summed together.
+    t : datetime
+
+    Returns
+    =======
+
+    lat, lon, alt - latitude, longitude (degrees), altitude (km)
     """
 
     jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
@@ -168,11 +189,12 @@ def teme2geodetic_spherical(x, y, z, t):
     lon = longitude_trunc(lon)
     alt = sqrt(x*x + y*y + z*z) - RE # h
 
+    # TODO: convert this to radians and use radians everywhere.
     return lat*RAD2DEG, lon*RAD2DEG, alt
 
-def teme2geodetic_oblate(x, y, z, t, ellipsoid):
+def teme2geodetic_oblate(x: float, y: float, z: float, t: datetime, ellipsoid: Ellipsoid):
     """
-    Converts ECEF coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).
+    Converts TEME/ECI coords (x,y,z - expressed in km) to LLA (longitude, lattitude, altitude).
     ellipsoid is Earth ellipsoid to be used (e.g. ellipsoid_wgs84).
 
     The calculations here are based on T.S. Kelso's excellent paper "Orbital Coordinate Systems, Part III
@@ -182,9 +204,9 @@ def teme2geodetic_oblate(x, y, z, t, ellipsoid):
     ==========
     x,y,z : float - coordates in TEME (True Equator Mean Equinoex) version of ECI (Earth Centered Intertial) coords system.
             This is the system that's produced by SGP4 models.
+    t : datetime - time of the observation
     ellipsoid: Ellipsoid - an Earth exlipsoid specifying Earth oblateness, e.g. Ellipsoid_wgs84. Two params are used from it:
             a and inverse of f. Both must be specified in kms
-    jd, fr : float - julian date - expressed as two floats that should be summed together.
 
     Returns
     =======
@@ -199,7 +221,7 @@ def teme2geodetic_oblate(x, y, z, t, ellipsoid):
 
     phii = 1 # This is the starting value for initial iteration
 
-    # There should be a check on |phii - phi| value, but let's always do 4 iterations. Good enough for now.
+    # There should be a check on |phii - phi| value, but let's always do 5 iterations. Good enough for now.
     for iter in range(1,5):
 
         C = 1/(sqrt(1-e2*pow(sin(phii), 2)))
@@ -218,10 +240,17 @@ def teme2geodetic_oblate(x, y, z, t, ellipsoid):
 
     return phi*RAD2DEG, lon*RAD2DEG, h
 
-def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
+def teme2geodetic_pymap3d(x: float, y: float, z: float, t : datetime, ell = None):
     """
-    Converts TEME coordinates to geodetic, using pymap3d library.
+    Converts TEME/ECI coordinates to geodetic, using pymap3d library.
     For details, see https://github.com/geospace-code/pymap3d
+
+    Parameters
+    ==========
+    x,y,z : float - coordates in TEME (True Equator Mean Equinoex) version of ECI (Earth Centered Intertial) coords system.
+            This is the system that's produced by SGP4 models.
+    t : datetime - time of the observation
+    ell: unknown - haven't figured this out yet.
 
     Returns
     =======
@@ -401,10 +430,11 @@ def georef(imgname: str, method: Method, tle1: str, tle2: str, aos_txt: str, los
 
     print("AOS converted to LLA is lat=%f long=%f alt=%f, azimuth=%f" % (aos_lla[0], aos_lla[1], aos_lla[2], aos_az) )
 
-    AVHRR_ANGLE = 54.3
+    fov = AVHRR_ANGLE
 
     # Now calculate corner positions (use only the first method)
-    swath = calc_swath(aos_lla[2], AVHRR_ANGLE)
+    swath = calc_swath(aos_lla[2], fov)
+    print("Instrument angle is %f deg, altitude is %f km, swath (each side) is %f km, total swath is %f km" % (fov, aos_lla[2], swath, swath*2))
     corner_ul = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, +90), swath)
     corner_ur = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, -90), swath)
 

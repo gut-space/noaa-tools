@@ -1,4 +1,5 @@
 from noaatools import georef
+from math import pi
 import unittest
 import pytest
 
@@ -54,4 +55,15 @@ class Georefests(unittest.TestCase):
         self.assertAlmostEqual(georef.calc_distance(54, 18, 53, 18), 111.31949079)
         self.assertAlmostEqual(georef.calc_distance(54, 19, 55, 18), 128.72457677)
         self.assertAlmostEqual(georef.calc_distance(54, 19, 51, 0), 1325.7042000) # Gdansk to London
+
+
+    def test_longitude_trunc(self):
+        self.assertAlmostEqual(georef.longitude_trunc(0), 0)
+        self.assertAlmostEqual(georef.longitude_trunc(pi), pi)
+        self.assertAlmostEqual(georef.longitude_trunc(-pi), -pi)
+        self.assertAlmostEqual(georef.longitude_trunc(2*pi), 0)
+        self.assertAlmostEqual(georef.longitude_trunc(2*pi + 0.1), 0.1)
+        self.assertAlmostEqual(georef.longitude_trunc(-pi), -pi)
+        self.assertAlmostEqual(georef.longitude_trunc(-pi - 1), pi - 1)
+        self.assertAlmostEqual(georef.longitude_trunc(100*pi), 0)
 
