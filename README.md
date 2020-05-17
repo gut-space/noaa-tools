@@ -15,7 +15,7 @@ Operation under development:
 
 Author: [Tomek Mrugalski](https://github.com/tomaszmrugalski/)
 
-# Installation
+## Installation
 
 Do the standard python thing:
 
@@ -25,20 +25,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-# Running unit-tests
-
-The unit-tests coverage is miserable so far. Nevertheless, you may do the following:
-
-```
-pip install pytest
-python -m pytest -s -v
-```
-
-During the first run, an image for satnogs observation 1276 (about 3MB) will be downloaded. It's a
-reasonably recent, good quality observation. I've decided to keep the repo clean and not pollute it
-with unnecessary images.
-
-# Usage
+## Usage
 
 To process an image, you should call process_img and pass two parameters. First is the name
 of the PNG file and the second parameter is a structure that explains what exactly you want
@@ -62,7 +49,13 @@ params = {
 process_img("tests/1276.png", params)
 ```
 
-# Georeferencing
+## Using from command line:
+
+```bash
+python -m noaatools.noaatools
+```
+
+## Georeferencing
 
 Currently is being worked on. There's code in noaa_postproc/georef.py, but it doesn't work yet.
 
@@ -84,7 +77,20 @@ georef(filename, tle1, tle2, aos, los)
 # The output Cesium code will be generated to 1276.js
 ```
 
-# Useful links
+## Running unit-tests
+
+The unit-tests coverage is miserable so far. Nevertheless, you may do the following:
+
+```
+pip install pytest
+python -m pytest -s -v
+```
+
+During the first run, an image for satnogs observation 1276 (about 3MB) will be downloaded. It's a
+reasonably recent, good quality observation. I've decided to keep the repo clean and not pollute it
+with unnecessary images.
+
+## Useful links
 
 * GDAL + python: https://pcjericks.github.io/py-gdalogr-cookbook/
 * Georeferencing in qgis: https://www.qgistutorials.com/en/docs/georeferencing_basics.html
