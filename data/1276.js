@@ -145,8 +145,8 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
 
 
     var questionPin = viewer.entities.add({
-        name : 'AOS(SPHERICAL) lat=79.859318,lon=65.910315',
-        position : Cesium.Cartesian3.fromDegrees(65.910315, 79.859318, 0.000000),
+        name : 'AOS(PYMAP3D) lat=79.999313,lon=66.591512',
+        position : Cesium.Cartesian3.fromDegrees(66.591512, 79.999313, 0.000000),
         billboard : {
             image : pinBuilder.fromText('A', Cesium.Color.BLUE, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
@@ -154,8 +154,8 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
     });
     
     var questionPin = viewer.entities.add({
-        name : 'LOS(SPHERICAL) lat=28.223308,lon=3.768348',
-        position : Cesium.Cartesian3.fromDegrees(3.768348, 28.223308, 0.000000),
+        name : 'LOS(PYMAP3D) lat=28.471957,lon=4.010928',
+        position : Cesium.Cartesian3.fromDegrees(4.010928, 28.471957, 0.000000),
         billboard : {
             image : pinBuilder.fromText('L', Cesium.Color.YELLOW, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
@@ -163,8 +163,8 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
     });
     
     var questionPin = viewer.entities.add({
-        name : 'Upper Left lat=83.597758,lon=47.775346',
-        position : Cesium.Cartesian3.fromDegrees(47.775346, 83.597758, 0.000000),
+        name : 'Upper Left lat=84.234023,lon=43.476290',
+        position : Cesium.Cartesian3.fromDegrees(43.476290, 84.234023, 0.000000),
         billboard : {
             image : pinBuilder.fromText('U', Cesium.Color.RED, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
@@ -172,8 +172,8 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
     });
     
     var questionPin = viewer.entities.add({
-        name : 'Upper Right lat=75.669464,lon=73.971107',
-        position : Cesium.Cartesian3.fromDegrees(73.971107, 75.669464, 0.000000),
+        name : 'Upper Right lat=75.135412,lon=75.435497',
+        position : Cesium.Cartesian3.fromDegrees(75.435497, 75.135412, 0.000000),
         billboard : {
             image : pinBuilder.fromText('U', Cesium.Color.GREEN, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
@@ -181,8 +181,8 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
     });
     
     var questionPin = viewer.entities.add({
-        name : 'Lower Left lat=29.210025,lon=-1.255804',
-        position : Cesium.Cartesian3.fromDegrees(-1.255804, 29.210025, 0.000000),
+        name : 'Lower Left lat=29.583794,lon=-1.810557',
+        position : Cesium.Cartesian3.fromDegrees(-1.810557, 29.583794, 0.000000),
         billboard : {
             image : pinBuilder.fromText('L', Cesium.Color.RED, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
@@ -190,8 +190,8 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
     });
     
     var questionPin = viewer.entities.add({
-        name : 'Lower Right lat=27.056640,lon=8.692279',
-        position : Cesium.Cartesian3.fromDegrees(8.692279, 27.056640, 0.000000),
+        name : 'Lower Right lat=27.117883,lon=9.698307',
+        position : Cesium.Cartesian3.fromDegrees(9.698307, 27.117883, 0.000000),
         billboard : {
             image : pinBuilder.fromText('L', Cesium.Color.GREEN, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
