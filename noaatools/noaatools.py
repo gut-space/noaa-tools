@@ -27,6 +27,7 @@ USAGE = '''
 from datetime import timedelta
 from noaatools import georef
 from noaatools import export_js
+from noaatools import export_csv
 
 import argparse
 
@@ -57,15 +58,17 @@ if __name__ == "__main__":
     d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr = georef.georef(method, tle1, tle2, aos, los)
 
     # Now export the data to Cesium JavaScript
-    outfile = ".".join(imgname.split('.')[:-1]) + ".js"
+    outfile_js  = ".".join(imgname.split('.')[:-1]) + ".js"
+    outfile_csv = ".".join(imgname.split('.')[:-1]) + ".txt"
 
     # BUG: For some reason the mean anomaly calculated in CZML exporter is off by couple degrees that's roughly equivalent to 5 minutes time.
     # Let's shift time by 5 minutes.
     delta = timedelta(minutes=5)
-    d1 -= delta
-    d2 -= delta
+    d1_czml = d1 - delta
+    d2_czml = d2 - delta
 
-    export_js.export2cesium(outfile, satname, d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, method.name)
+    export_js.export2cesium(outfile_js, satname, d1_czml, d2_czml, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, method.name)
+    export_csv.export2csv(outfile_csv, satname, d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, method.name)
 
     # STEP 6: (possibly outside of this script):
     # - use GDAL library to georeference image (https://pcjericks.github.io/py-gdalogr-cookbook/)
