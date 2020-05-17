@@ -11,8 +11,8 @@
     "version": "1.0",
     "name": "document_packet",
     "clock": {
-        "interval": "2020-04-12T08:56:03Z/2020-04-12T09:12:06Z",
-        "currentTime": "2020-04-12T08:56:03Z",
+        "interval": "2020-04-12T08:56:03.063/2020-04-12T09:12:06.467",
+        "currentTime": "2020-04-12T08:56:03.063",
         "multiplier": 60,
         "range": "LOOP_STOP",
         "step": "SYSTEM_CLOCK_MULTIPLIER"
@@ -25,9 +25,9 @@
         "ellipsoid": [
             {
                 "array": [
-                    6378136.6,
-                    6378136.6,
-                    6356751.9
+                    6378137.0,
+                    6378137.0,
+                    6356752.314245179
                 ]
             }
         ],
@@ -41,59 +41,59 @@
     "id": 0,
     "availability": "2020-04-12T08:56:03Z/2020-04-12T09:12:06Z",
     "position": {
-        "epoch": "2020-04-12T08:56:03Z",
+        "epoch": "2020-04-12T08:56:03.063",
         "interpolationAlgorithm": "LAGRANGE",
         "interpolationDegree": 5,
         "referenceFrame": "INERTIAL",
         "cartesian": [
             0.0,
-            546809.6949856463,
-            997167.3135742369,
-            7128330.303366815,
+            546809.6949835494,
+            997167.3135752518,
+            7128330.303366836,
             96.3403478,
-            1188103.644765849,
-            681079.352082901,
-            7087761.564471393,
+            1188103.6447637808,
+            681079.352083942,
+            7087761.56447164,
             192.6806956,
-            1817723.0522245967,
-            358298.7724538702,
-            6977545.958026942,
+            1817723.0522225776,
+            358298.7724549277,
+            6977545.958027417,
             289.0210434,
-            2429484.5913164364,
-            31997.997493082,
-            6798779.905981012,
+            2429484.5913144816,
+            31997.9974941473,
+            6798779.905981708,
             385.3613912,
-            3017383.697285734,
-            -294617.2016414291,
-            6553235.350300109,
+            3017383.697283869,
+            -294617.2016403693,
+            6553235.350301016,
             481.701739,
-            3575654.0392880384,
-            -618339.5775687741,
-            6243341.522087208,
+            3575654.0392862787,
+            -618339.5775677286,
+            6243341.522088322,
             578.0420868,
-            4098824.475112825,
-            -935992.2298880289,
-            5872160.12869854,
+            4098824.475111188,
+            -935992.2298870086,
+            5872160.1286998475,
             674.3824346,
-            4581772.910096309,
-            -1244460.0508322448,
-            5443354.242960914,
+            4581772.910094812,
+            -1244460.0508312597,
+            5443354.242962401,
             770.7227824,
-            5019776.520857897,
-            -1540720.471675621,
-            4961151.244429712,
+            5019776.520856553,
+            -1540720.471674681,
+            4961151.244431365,
             867.0631302,
-            5408557.848776842,
-            -1821873.1988128214,
-            4430300.223215314,
+            5408557.8487756625,
+            -1821873.1988119334,
+            4430300.223217122,
             963.403478,
-            5744326.317360932,
-            -2085168.642480352,
-            3856024.311564967,
+            5744326.317359933,
+            -2085168.6424795266,
+            3856024.3115669084,
             1059.7438258,
-            6023814.781011917,
-            -2328034.7582685337,
-            3243968.4565759734
+            6023814.781011104,
+            -2328034.7582677784,
+            3243968.4565780303
         ]
     },
     "billboard": {
@@ -143,57 +143,21 @@
 ];
 var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml));
 
- // points 0 out of 3
+
     var questionPin = viewer.entities.add({
-        name : 'AOS(spherical) lat=79.859318,lon=65.910315',
+        name : 'AOS(SPHERICAL) lat=79.859318,lon=65.910315',
         position : Cesium.Cartesian3.fromDegrees(65.910315, 79.859318, 0.000000),
         billboard : {
-            image : pinBuilder.fromText('A', Cesium.Color.RED, 48).toDataURL(),
+            image : pinBuilder.fromText('A', Cesium.Color.BLUE, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
     
     var questionPin = viewer.entities.add({
-        name : 'LOS(spherical) lat=28.223308,lon=3.768348',
+        name : 'LOS(SPHERICAL) lat=28.223308,lon=3.768348',
         position : Cesium.Cartesian3.fromDegrees(3.768348, 28.223308, 0.000000),
         billboard : {
-            image : pinBuilder.fromText('L', Cesium.Color.GREEN, 48).toDataURL(),
-            verticalOrigin : Cesium.VerticalOrigin.BOTTOM
-        }
-    });
-     // points 1 out of 3
-    var questionPin = viewer.entities.add({
-        name : 'AOS(oblate) lat=79.917969,lon=65.910315',
-        position : Cesium.Cartesian3.fromDegrees(65.910315, 79.917969, 0.000000),
-        billboard : {
-            image : pinBuilder.fromText('A', Cesium.Color.RED, 48).toDataURL(),
-            verticalOrigin : Cesium.VerticalOrigin.BOTTOM
-        }
-    });
-    
-    var questionPin = viewer.entities.add({
-        name : 'LOS(oblate) lat=28.364909,lon=3.768348',
-        position : Cesium.Cartesian3.fromDegrees(3.768348, 28.364909, 0.000000),
-        billboard : {
-            image : pinBuilder.fromText('L', Cesium.Color.GREEN, 48).toDataURL(),
-            verticalOrigin : Cesium.VerticalOrigin.BOTTOM
-        }
-    });
-     // points 2 out of 3
-    var questionPin = viewer.entities.add({
-        name : 'AOS(pymap3d) lat=79.999313,lon=66.591512',
-        position : Cesium.Cartesian3.fromDegrees(66.591512, 79.999313, 0.000000),
-        billboard : {
-            image : pinBuilder.fromText('A', Cesium.Color.RED, 48).toDataURL(),
-            verticalOrigin : Cesium.VerticalOrigin.BOTTOM
-        }
-    });
-    
-    var questionPin = viewer.entities.add({
-        name : 'LOS(pymap3d) lat=28.471957,lon=4.010928',
-        position : Cesium.Cartesian3.fromDegrees(4.010928, 28.471957, 0.000000),
-        billboard : {
-            image : pinBuilder.fromText('L', Cesium.Color.GREEN, 48).toDataURL(),
+            image : pinBuilder.fromText('L', Cesium.Color.YELLOW, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
@@ -202,7 +166,7 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
         name : 'Upper Left lat=83.597758,lon=47.775346',
         position : Cesium.Cartesian3.fromDegrees(47.775346, 83.597758, 0.000000),
         billboard : {
-            image : pinBuilder.fromText('U', Cesium.Color.BLUE, 48).toDataURL(),
+            image : pinBuilder.fromText('U', Cesium.Color.RED, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
@@ -211,25 +175,25 @@ var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml))
         name : 'Upper Right lat=75.669464,lon=73.971107',
         position : Cesium.Cartesian3.fromDegrees(73.971107, 75.669464, 0.000000),
         billboard : {
-            image : pinBuilder.fromText('U', Cesium.Color.BLUE, 48).toDataURL(),
+            image : pinBuilder.fromText('U', Cesium.Color.GREEN, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
     
     var questionPin = viewer.entities.add({
-        name : 'Lower Left lat=29.310839,lon=-1.835953',
-        position : Cesium.Cartesian3.fromDegrees(-1.835953, 29.310839, 0.000000),
+        name : 'Lower Left lat=29.210025,lon=-1.255804',
+        position : Cesium.Cartesian3.fromDegrees(-1.255804, 29.210025, 0.000000),
         billboard : {
-            image : pinBuilder.fromText('L', Cesium.Color.BLUE, 48).toDataURL(),
+            image : pinBuilder.fromText('L', Cesium.Color.RED, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
     
     var questionPin = viewer.entities.add({
-        name : 'Lower Right lat=26.912369,lon=9.248306',
-        position : Cesium.Cartesian3.fromDegrees(9.248306, 26.912369, 0.000000),
+        name : 'Lower Right lat=27.056640,lon=8.692279',
+        position : Cesium.Cartesian3.fromDegrees(8.692279, 27.056640, 0.000000),
         billboard : {
-            image : pinBuilder.fromText('L', Cesium.Color.BLUE, 48).toDataURL(),
+            image : pinBuilder.fromText('L', Cesium.Color.GREEN, 48).toDataURL(),
             verticalOrigin : Cesium.VerticalOrigin.BOTTOM
         }
     });
