@@ -364,58 +364,28 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     # STEP 2: Calculate sub-satellite point at AOS, LOS times
     # T.S. Kelso saves the day *again*: see here: https://celestrak.com/columns/v02n03/
 
-    # Ok, we have sat position at time of AOS and LOS. The tricky part here is those are in
-    # Earth-Centered Intertial (ECI) reference system. The model used is TEME (True equator,
-    # mean equinox). Let's calculate the SSP using three methods:
-    # - simple (that assumes spherical Earth)
-    # - oblate Earth (uses passed ellipsoid, WGS84 in this case)
-    # - using pymap3d lib (which is most precise)
+    # Ok, we have sat position at time of AOS and LOS returned by SGP4 models. The tricky part here is those are in
+    # Earth-Centered Intertial (ECI) reference system. The model used is TEME (True equator mean equinox).
 
-    # AOS calc
+    # Convert AOS coordinates to LLA
     aos_lla = teme2geodetic(method, pos1[0], pos1[1], pos1[2], d1)
 
-    # Let's use a point 30 seconds later. AOS and (AOS + 30s) will determine the azimuth
+    # Now caluclate a position for AOS + 30s. Will use it to determine the azimuth
     d1delta = d1 + timedelta(seconds = 30.0)
-
-    # Now calculate azimuth
     aos_bis = teme2geodetic(method, pos1delta[0], pos1delta[1], pos1delta[2], d1delta)
     aos_az = calc_azimuth(aos_lla, aos_bis)
 
     print("AOS converted to LLA is lat=%f long=%f alt=%f, azimuth=%f" % (aos_lla[0], aos_lla[1], aos_lla[2], aos_az) )
 
-    fov = AVHRR_ANGLE
-
-    # Now calculate corner positions (use only the first method)
-    swath = calc_swath(aos_lla[2], fov)
-    print("Instrument angle is %f deg, altitude is %f km, swath (each side) is %f km, total swath is %f km" % (fov, aos_lla[2], swath, swath*2))
-    corner_ul = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, +90), swath)
-    corner_ur = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, -90), swath)
-
-    print("Upper left corner:  lat=%f lon=%f" % (corner_ul[0], corner_ul[1]))
-    print("Upper right corner: lat=%f lon=%f" % (corner_ur[0], corner_ur[1]))
-
-    # LOS
+    # Now do the same for LOS
     los_lla = teme2geodetic(method, pos2[0], pos2[1], pos2[2], d2)
 
     # Let's use a point 30 seconds later. AOS and (AOS + 30s) will determine the azimuth
     d2delta = d2 + timedelta(seconds = 30.0)
-
     los_bis = teme2geodetic(method, pos2delta[0], pos2delta[1], pos2delta[2], d2delta)
-
     los_az = calc_azimuth(los_lla, los_bis)
 
     print("LOS converted to LLA is lat=%f long=%f alt=%f azimuth=%f" % (los_lla[0], los_lla[1], los_lla[2], los_az))
-
-
-    # Now calculate corner positions (use only the first method)
-    corner_ll = radial_distance(los_lla[0], los_lla[1], azimuth_add(los_az, +90), swath)
-    corner_lr = radial_distance(los_lla[0], los_lla[1], azimuth_add(los_az, -90), swath)
-    print("Lower left corner:  lat=%f lon=%f" % (corner_ll[0], corner_ll[1]))
-    print("Lower right corner: lat=%f lon=%f" % (corner_lr[0], corner_lr[1]))
-
-    # Ok, we have the sat position in LLA format. Getting sub-satellite point is trivial. Just assume altitude is 0.
-    aos_lla = get_ssp(aos_lla)
-    los_lla = get_ssp(los_lla)
 
     # STEP 3: Find image corners. Here's an algorithm proposal:
     #
@@ -437,10 +407,26 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
 
     # TODO: Calculcate if this pass is northbound or southbound
 
-    # BUG: For some reason the mean anomaly is off by couple degrees that's roughly equivalent to 5 minutes time.
-    # Let's shift time by 5 minutes.
-    delta = timedelta(minutes=5)
-    d1 -= delta
-    d2 -= delta
+    # Let's assume this is AVHRR instrument. Let's use its field of view angle.
+    fov = AVHRR_ANGLE
+
+    # Now calculate corner positions (use only the first method)
+    swath = calc_swath(aos_lla[2], fov)
+    print("Instrument angle is %f deg, altitude is %f km, swath (each side) is %f km, total swath is %f km" % (fov, aos_lla[2], swath, swath*2))
+    corner_ul = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, +90), swath)
+    corner_ur = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, -90), swath)
+
+    print("Upper left corner:  lat=%f lon=%f" % (corner_ul[0], corner_ul[1]))
+    print("Upper right corner: lat=%f lon=%f" % (corner_ur[0], corner_ur[1]))
+
+    # Now calculate corner positions (use only the first method)
+    corner_ll = radial_distance(los_lla[0], los_lla[1], azimuth_add(los_az, +90), swath)
+    corner_lr = radial_distance(los_lla[0], los_lla[1], azimuth_add(los_az, -90), swath)
+    print("Lower left corner:  lat=%f lon=%f" % (corner_ll[0], corner_ll[1]))
+    print("Lower right corner: lat=%f lon=%f" % (corner_lr[0], corner_lr[1]))
+
+    # Ok, we have the sat position in LLA format. Getting sub-satellite point is trivial. Just assume altitude is 0.
+    aos_lla = get_ssp(aos_lla)
+    los_lla = get_ssp(los_lla)
 
     return d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr

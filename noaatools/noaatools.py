@@ -24,6 +24,7 @@ USAGE = '''
 # los - loss of signal
 '''
 
+from datetime import timedelta
 from noaatools import georef
 from noaatools import export_js
 
@@ -57,6 +58,13 @@ if __name__ == "__main__":
 
     # Now export the data to Cesium JavaScript
     outfile = ".".join(imgname.split('.')[:-1]) + ".js"
+
+    # BUG: For some reason the mean anomaly calculated in CZML exporter is off by couple degrees that's roughly equivalent to 5 minutes time.
+    # Let's shift time by 5 minutes.
+    delta = timedelta(minutes=5)
+    d1 -= delta
+    d2 -= delta
+
     export_js.export2cesium(outfile, satname, d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, method.name)
 
     # STEP 6: (possibly outside of this script):
