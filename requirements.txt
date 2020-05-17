@@ -42,7 +42,7 @@ secretstorage==3.1.2      # via keyring
 sgp4==2.5                 # via -r requirements.in
 six==1.14.0               # via astroquery, cryptography, cycler, html5lib, plotly, python-dateutil, retrying, w3lib
 soupsieve==2.0            # via beautifulsoup4
-tle-tools==0.2.1          # via -r requirements.in
+tle-tools==0.2.2          # via -r requirements.in
 urllib3==1.25.9           # via requests
 w3lib==1.21.0             # via czml3
 webencodings==0.5.1       # via html5lib

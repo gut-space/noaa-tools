@@ -4,7 +4,7 @@ sgp4
 
 pymap3d
 
-tle-tools
+tle-tools == 0.2.2
 
 czml3
 
