@@ -21,9 +21,7 @@ USAGE = '''
 
 import sys
 from datetime import datetime, timezone, timedelta
-from collections import namedtuple
 from math import atan, atan2, sqrt, pi, sin, cos, asin, acos, tan
-from enum import Enum
 from typing import Tuple
 
 from sgp4.io import twoline2rv
@@ -36,11 +34,6 @@ from pymap3d import ecef
 sys.path.append('.')
 from noaatools import export_czml
 from noaatools.constants import *
-
-class Method(Enum):
-    SPHERICAL = 1
-    OBLATE = 2
-    PYMAP3D = 3
 
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
