@@ -341,7 +341,7 @@ def teme2geodetic(method: Method, x: float, y: float, z: float, t: datetime):
         return teme2geodetic_pymap3d(x, y, z, t)
     raise Exception("Invalid calculation method: %s" % method)
 
-def georef(imgname: str, method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
+def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     """ This is a naive georeferencing method:
         - calculates the sat location at AOS and LOS points (using )
     then calculates distance between them. """
@@ -454,39 +454,15 @@ def georef(imgname: str, method: Method, tle1: str, tle2: str, aos_txt: str, los
     #    https://www.fcc.gov/media/radio/find-terminal-coordinates
     #    https://stackoverflow.com/questions/877524/calculating-coordinates-given-a-bearing-and-a-distance
 
-    # STEP 4: Do we need to detect if it's northbound or southbound fly-over? We can do it easily, by
-    # comparing aos_lat (lla1[1]) with los_lat (lla2[1])
+    # TODO: Calculcate if this pass is northbound or southbound
 
-    # STEP 5: Export georeferencing data.
-    outfile = ".".join(imgname.split('.')[:-1]) + ".js"
-
-    # BUG: For some reason the anomaly is off by couple degrees that's roughly equivalent to 5 minutes time.
+    # BUG: For some reason the mean anomaly is off by couple degrees that's roughly equivalent to 5 minutes time.
+    # Let's shift time by 5 minutes.
     delta = timedelta(minutes=5)
     d1 -= delta
     d2 -= delta
 
-    export_czml.export2cesium(outfile, imgname, d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2,
-        method.name)
-
-    # STEP 6: (possibly outside of this script):
-    # - use GDAL library to georeference image (https://pcjericks.github.io/py-gdalogr-cookbook/)
-    # - import into QGIS (and follow this tutorial: https://www.qgistutorials.com/en/docs/georeferencing_basics.html)
-    # - display the image in Cesium (https://www.cesium.com/docs/cesiumjs-ref-doc/SingleTileImageryProvider.html)
+    return d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr
 
 def usage():
     print(USAGE)
-
-if __name__ == "__main__":
-
-    # Let's ignore input parameters and pretend we were asked to georeference observation #1276.
-    #if len(sys.argv) < 5:
-    #    usage()
-    #    sys.exit(-1)
-
-    tle1 = '1 28654U 05018A   20098.54037539  .00000075  00000-0  65128-4 0  9992'
-    tle2 = '2 28654  99.0522 154.2797 0015184  73.2195 287.0641 14.12501077766909'
-
-    aos = '2020-04-12Z09:01:03.063476'
-    los = '2020-04-12Z09:17:06.466954'
-
-    georef("data/1276.png", Method.SPHERICAL, tle1, tle2, aos, los)
