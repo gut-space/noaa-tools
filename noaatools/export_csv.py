@@ -20,7 +20,7 @@ def export2csv(outfile, satname, aos_ts, los_ts, aos_lla, los_lla,
     txt += "# TLE:\n"
     txt += "# %s\n" % tle1
     txt += "# %s\n" % tle2
-    txt += "object, longitude, latitude, altitude, comment\n"
+    txt += "object, longitude [deg], latitude [deg], altitude [km], comment\n"
     txt += to_text("AOS", aos_lla, aos_ts) + "\n"
     txt += to_text("LOS", los_lla, los_ts) + "\n"
     txt += to_text("Upper Left Corner", corner_ul, aos_ts) + "\n"
