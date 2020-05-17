@@ -56,9 +56,6 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
     aos_astropy = time.Time(aos, scale="utc")
     los_astropy = time.Time(los, scale="utc")
 
-    print("#### export2cesium AOS=%s/%s" % (aos, aos_astropy))
-    print("#### export2cesium LOS=%s/%s" % (los, los_astropy))
-
     extractor = CZMLExtractor(aos_astropy, los_astropy, sample_points)
     extractor.add_orbit(orb, path_show=True, path_width=3, path_color=[125, 80, 120, 255], label_text=satname)
 
@@ -87,8 +84,8 @@ def expand3d(pt):
         return pt
     return pt[0], pt[1], 0.0
 
-def export2cesium(outfile, imgfile, aos, los, aos_list, los_list, methods, tle1, tle2,
-                  corner_ul, corner_ur, corner_ll, corner_lr):
+def export2cesium(outfile, imgfile, aos_ts, los_ts, aos_lla, los_lla,
+                  corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, text):
     """
     Exports all data to JavaScript that's usable with Cesium.
 
@@ -104,31 +101,26 @@ def export2cesium(outfile, imgfile, aos, los, aos_list, los_list, methods, tle1,
     tle2 - second line of TLE data
     """
 
-    if len(methods) != len(aos_list) or len(methods) != len(los_list):
-        raise Exception("Incorrect parameter size: len(methods) != len(aos_list) != len(los_list)")
-
     txt =  cesium_preamble()
-    txt += export2cesium_tle(tle1, tle2, "satname", aos, los)
+    txt += export2cesium_tle(tle1, tle2, "satname", aos_ts, los_ts)
     txt += "\n\n"
 
-    for i in range(0, len(methods)):
-        txt += " // points %d out of %d" % (i, len(methods))
-        txt += export2cesium_point(aos_list[i], "AOS(%s)" % methods[i], "RED")
-        txt += export2cesium_point(los_list[i], "LOS(%s)" % methods[i], "GREEN")
+    txt += export2cesium_point(aos_lla, "AOS(%s)" % text, "BLUE")
+    txt += export2cesium_point(los_lla, "LOS(%s)" % text, "YELLOW")
 
     # Export corners
     if corner_ul:
         corner_ul = expand3d(corner_ul)
-        txt += export2cesium_point(corner_ul, "Upper Left", "BLUE")
+        txt += export2cesium_point(corner_ul, "Upper Left", "RED")
     if corner_ur:
         corner_ur = expand3d(corner_ur)
-        txt += export2cesium_point(corner_ur, "Upper Right", "BLUE")
+        txt += export2cesium_point(corner_ur, "Upper Right", "GREEN")
     if corner_ll:
         corner_ll = expand3d(corner_ll)
-        txt += export2cesium_point(corner_ll, "Lower Left", "BLUE")
+        txt += export2cesium_point(corner_ll, "Lower Left", "RED")
     if corner_lr:
         corner_lr = expand3d(corner_lr)
-        txt += export2cesium_point(corner_lr, "Lower Right", "BLUE")
+        txt += export2cesium_point(corner_lr, "Lower Right", "GREEN")
 
     f = open(outfile, "w")
     f.write(txt)

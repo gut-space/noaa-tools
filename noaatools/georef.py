@@ -208,8 +208,6 @@ def teme2geodetic_oblate(x, y, z, t, ellipsoid):
         phi = atan2(z + a*C*e2*sin(phii), R)
         h= R/(cos(phi)) - a*C
 
-        # print("iter=%d, phi=%f, phii=%f, |phi-phii|=%f" % (iter, phi, phii, abs(phi-phii)))
-
         phii=phi
 
     jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
@@ -227,7 +225,7 @@ def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
 
     Returns
     =======
-    lat, lon, alt - latitude, longitude (both in degrees), alt (in km)
+    lat, lon, alt - latitude, longitude (in degrees), alt (in km)
     """
 
     # Short version - whole conversion in one go
@@ -236,10 +234,11 @@ def teme2geodetic_pymap3d(x, y, z, t : datetime, ell = None):
 
     #print("teme[x,y,z]=%f, %f, %f" % (x, y, z))
     xecef, yecef, zecef = ecef.eci2ecef(np.array([x*1000]), np.array([y*1000]), np.array([z*1000]), t)
-    #print("exef[x,y,z]=%f, %f, %f" % (xecef, yecef, zecef))
+    #print("ecef[x,y,z]=%f, %f, %f" % (xecef, yecef, zecef))
 
     # True = we want the response in degrees
     lat, lon, alt = ecef.ecef2geodetic(xecef, yecef, zecef, ell, True)
+    #print("lla = %f, %f, %f" % (lat, lon, alt))
     return lat, lon, alt/1000.0
 
 
@@ -281,7 +280,6 @@ def calc_swath(alt, nu):
     # return alt*tan(nu)
 
     # Source Wertz "Mission geometry", pg. 420.
-    print("alt=%f nu=%f, RE=%f" % (alt, nu, RE))
 
     # rho is an angle between two lines: (sat - tangential to Earth) and (sat - Earth center)
     rho = asin(RE/(RE+alt))
@@ -333,14 +331,26 @@ def azimuth_add(az, delta):
 
     return (az + delta) % 360.0
 
-def georef(imgname, tle1, tle2, aos, los):
+def teme2geodetic(method: Method, x: float, y: float, z: float, t: datetime):
+    if method == Method.SPHERICAL:
+        return teme2geodetic_spherical(x, y, z, t)
+    if method == Method.OBLATE:
+        return teme2geodetic_oblate(x, y, z, t, ellipsoid_wgs84)
+    if method == Method.PYMAP3D:
+        return teme2geodetic_pymap3d(x, y, z, t)
+    raise Exception("Invalid calculation method: %s" % method)
+
+def georef(imgname: str, method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     """ This is a naive georeferencing method:
         - calculates the sat location at AOS and LOS points (using )
     then calculates distance between them. """
 
     # Convert date as a string datetime. Make sure to use UTC rather than the default (local timezone)
-    d1 = datetime.fromisoformat(aos).replace(tzinfo=timezone.utc)
-    d2 = datetime.fromisoformat(los).replace(tzinfo=timezone.utc)
+    d1 = datetime.fromisoformat(aos_txt).replace(tzinfo=timezone.utc)
+    d2 = datetime.fromisoformat(los_txt).replace(tzinfo=timezone.utc)
+
+    print("AOS time: %s" % d1)
+    print("LOS time: %s" % d2)
 
     # STEP 1: Calculate sat location at AOS and LOS
 
@@ -366,8 +376,8 @@ def georef(imgname, tle1, tle2, aos, los):
     # Delta between a point and a point+delta (the second delta point is used to calculate azimuth)
     DELTA = 30.0
 
-    _, pos1delta, _ = sat.sgp4(jd1, fr1 + DELTA/86400)
-    _, pos2delta, _ = sat.sgp4(jd2, fr2 + DELTA/86400)
+    _, pos1delta, _ = sat.sgp4(jd1, fr1 + DELTA/86400.0)
+    _, pos2delta, _ = sat.sgp4(jd2, fr2 + DELTA/86400.0)
 
     # STEP 2: Calculate sub-satellite point at AOS, LOS times
     # T.S. Kelso saves the day *again*: see here: https://celestrak.com/columns/v02n03/
@@ -380,79 +390,49 @@ def georef(imgname, tle1, tle2, aos, los):
     # - using pymap3d lib (which is most precise)
 
     # AOS calc
-    aos1 = teme2geodetic_spherical(pos1[0], pos1[1], pos1[2], d1)
-    aos2 = teme2geodetic_oblate(pos1[0], pos1[1], pos1[2], d1, ellipsoid_wgs84)
-    aos3 = teme2geodetic_pymap3d(pos1[0], pos1[1], pos1[2], d1)
-
-    print("METHOD 1 (spherical Earth): AOS converted to LLA is lat=%f long=%f alt=%f" % (aos1[0], aos1[1], aos1[2]) )
-    print("METHOD 2 (oblate Earth):    AOS converted to LLA is lat=%f long=%f alt=%f" % (aos2[0], aos2[1], aos2[2]) )
-    print("METHOD 3 (pymap3d):         AOS converted to LLA is lat=%f long=%f alt=%f" % (aos3[0], aos3[1], aos3[2]) )
+    aos_lla = teme2geodetic(method, pos1[0], pos1[1], pos1[2], d1)
 
     # Let's use a point 30 seconds later. AOS and (AOS + 30s) will determine the azimuth
     d1delta = d1 + timedelta(seconds = 30.0)
 
     # Now calculate azimuth
-    aos1bis = teme2geodetic_spherical(pos1delta[0], pos1delta[1], pos1delta[2], d1delta)
-    aos2bis = teme2geodetic_oblate(pos1delta[0], pos1delta[1], pos1delta[2], d1delta, ellipsoid_wgs84)
-    aos3bis = teme2geodetic_pymap3d(pos1delta[0], pos1delta[1], pos1delta[2], d1delta)
-    az1 = calc_azimuth(aos1, aos1bis)
-    az2 = calc_azimuth(aos2, aos2bis)
-    az3 = calc_azimuth(aos3, aos3bis)
+    aos_bis = teme2geodetic(method, pos1delta[0], pos1delta[1], pos1delta[2], d1delta)
+    aos_az = calc_azimuth(aos_lla, aos_bis)
 
-    print("METHOD1 AOS azimuth = %f" % az1)
-    print("METHOD2 AOS azimuth = %f" % az2)
-    print("METHOD3 AOS azimuth = %f" % az3)
+    print("AOS converted to LLA is lat=%f long=%f alt=%f, azimuth=%f" % (aos_lla[0], aos_lla[1], aos_lla[2], aos_az) )
 
-    avhrr_angle = 54.3
+    AVHRR_ANGLE = 54.3
 
     # Now calculate corner positions (use only the first method)
-    corner_ul = radial_distance(aos1[0], aos1[1], az1 + 90, calc_swath(aos1[2], avhrr_angle ))
-    corner_ur = radial_distance(aos1[0], aos1[1], az1 - 90, calc_swath(aos1[2], avhrr_angle ))
+    swath = calc_swath(aos_lla[2], AVHRR_ANGLE)
+    corner_ul = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, +90), swath)
+    corner_ur = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, -90), swath)
 
-    print("METHOD1 Upper left corner:  lat=%f lon=%f" % (corner_ul[0], corner_ul[1]))
-    print("METHOD1 Upper right corner: lat=%f lon=%f" % (corner_ur[0], corner_ur[1]))
+    print("Upper left corner:  lat=%f lon=%f" % (corner_ul[0], corner_ul[1]))
+    print("Upper right corner: lat=%f lon=%f" % (corner_ur[0], corner_ur[1]))
 
     # LOS
-    los1 = teme2geodetic_spherical(pos2[0], pos2[1], pos2[2], d2)
-    los2 = teme2geodetic_oblate(pos2[0], pos2[1], pos2[2], d2, ellipsoid_wgs84)
-    los3 = teme2geodetic_pymap3d(pos2[0], pos2[1], pos2[2], d2)
-
-    print("METHOD 1 (spherical Earth): LOS converted to LLA is lat=%f long=%f alt=%f" % (los1[0], los1[1], los1[2]))
-    print("METHOD 2 (oblate Earth):    LOS converted to LLA is lat=%f long=%f alt=%f" % (los2[0], los2[1], los2[2]))
-    print("METHOD 3 (pymap3d):         LOS converted to LLA is lat=%f long=%f alt=%f" % (los3[0], los3[1], los3[2]))
+    los_lla = teme2geodetic(method, pos2[0], pos2[1], pos2[2], d2)
 
     # Let's use a point 30 seconds later. AOS and (AOS + 30s) will determine the azimuth
     d2delta = d2 + timedelta(seconds = 30.0)
 
-    los1bis = teme2geodetic_spherical(pos2delta[0], pos2delta[1], pos2delta[2], d2delta)
-    los2bis = teme2geodetic_oblate(pos2delta[0], pos2delta[1], pos2delta[2], d2delta, ellipsoid_wgs84)
-    los3bis = teme2geodetic_pymap3d(pos2delta[0], pos2delta[1], pos2delta[2], d2delta)
-    print("METHOD 1 (spherical Earth): LOSbis converted to LLA is lat=%f long=%f alt=%f" % (los1bis[0], los1bis[1], los1bis[2]))
-    print("METHOD 2 (oblate Earth):    LOSbis converted to LLA is lat=%f long=%f alt=%f" % (los2bis[0], los2bis[1], los2bis[2]))
-    print("METHOD 3 (pymap3d):         LOSbis converted to LLA is lat=%f long=%f alt=%f" % (los3bis[0], los3bis[1], los3bis[2]))
+    los_bis = teme2geodetic(method, pos2delta[0], pos2delta[1], pos2delta[2], d2delta)
 
-    az1los = calc_azimuth(los1, los1bis)
-    az2los = calc_azimuth(los2, los2bis)
-    az3los = calc_azimuth(los3, los3bis)
+    los_az = calc_azimuth(los_lla, los_bis)
 
-    print("METHOD1 LOS azimuth = %f" % az1los)
-    print("METHOD2 LOS azimuth = %f" % az2los)
-    print("METHOD3 LOS azimuth = %f" % az3los)
+    print("LOS converted to LLA is lat=%f long=%f alt=%f azimuth=%f" % (los_lla[0], los_lla[1], los_lla[2], los_az))
+
 
     # Now calculate corner positions (use only the first method)
-    corner_ll = radial_distance(los1[0], los1[1], az1los + 90, calc_swath(los1[2], avhrr_angle ))
-    corner_lr = radial_distance(los1[0], los1[1], az1los - 90, calc_swath(los1[2], avhrr_angle ))
-    print("METHOD1 Lower left corner:  lat=%f lon=%f" % (corner_ll[0], corner_ll[1]))
-    print("METHOD1 Lower right corner: lat=%f lon=%f" % (corner_lr[0], corner_lr[1]))
+    corner_ll = radial_distance(los_lla[0], los_lla[1], azimuth_add(los_az, +90), swath)
+    corner_lr = radial_distance(los_lla[0], los_lla[1], azimuth_add(los_az, -90), swath)
+    print("Lower left corner:  lat=%f lon=%f" % (corner_ll[0], corner_ll[1]))
+    print("Lower right corner: lat=%f lon=%f" % (corner_lr[0], corner_lr[1]))
 
     # Ok, we have the sat position in LLA format. Getting sub-satellite point is trivial. Just assume altitude is 0.
-    aos1 = get_ssp(aos1)
-    aos2 = get_ssp(aos2)
-    aos3 = get_ssp(aos3)
-
-    los1 = get_ssp(los1)
-    los2 = get_ssp(los2)
-    los3 = get_ssp(los3)
+    aos_lla = get_ssp(aos_lla)
+    los_lla = get_ssp(los_lla)
 
     # STEP 3: Find image corners. Here's an algorithm proposal:
     #
@@ -477,14 +457,14 @@ def georef(imgname, tle1, tle2, aos, los):
 
     # STEP 5: Export georeferencing data.
     outfile = ".".join(imgname.split('.')[:-1]) + ".js"
-    aos_list = [ aos1, aos2, aos3 ]
-    los_list = [ los1, los2, los3 ]
-    methods  = [ "spherical", "oblate", "pymap3d" ]
 
-    # BUG: For some reason the anomaly is off by could degrees that's roughly equivalent to 5 minutes time.
+    # BUG: For some reason the anomaly is off by couple degrees that's roughly equivalent to 5 minutes time.
     delta = timedelta(minutes=5)
+    d1 -= delta
+    d2 -= delta
 
-    export_czml.export2cesium(outfile, imgname, d1 - delta, d2 - delta, aos_list, los_list, methods, tle1, tle2, corner_ul, corner_ur, corner_ll, corner_lr)
+    export_czml.export2cesium(outfile, imgname, d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2,
+        method.name)
 
     # STEP 6: (possibly outside of this script):
     # - use GDAL library to georeference image (https://pcjericks.github.io/py-gdalogr-cookbook/)
@@ -495,18 +475,6 @@ def usage():
     print(USAGE)
 
 if __name__ == "__main__":
-    params = {
-        "histogram": True,
-        "histogram-adaptive": True,
-        "border": True,
-        "show": True,
-        "write": False,
-        "write-left": True,
-        "write-right": False,
-        "denoise": False,
-        "georef": True # Georeference
-    }
-
 
     # Let's ignore input parameters and pretend we were asked to georeference observation #1276.
     #if len(sys.argv) < 5:
@@ -519,12 +487,4 @@ if __name__ == "__main__":
     aos = '2020-04-12Z09:01:03.063476'
     los = '2020-04-12Z09:17:06.466954'
 
-    georef("data/1276.png", tle1, tle2, aos, los)
-
-
-# This one is interesting.
-# https://en.wikipedia.org/wiki/Geographic_coordinate_conversion#From_ECEF_to_geodetic_coordinates
-
-
-# This one has almost complete solution using Skyfield
-# https://space.stackexchange.com/questions/19339/better-way-to-get-approximate-ground-track-for-a-satellite-using-skyfield/40218#40218
+    georef("data/1276.png", Method.SPHERICAL, tle1, tle2, aos, los)
