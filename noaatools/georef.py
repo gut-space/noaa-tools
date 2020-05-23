@@ -14,7 +14,7 @@ from pymap3d import ecef
 
 sys.path.append('.')
 from noaatools import export_js
-from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_ANGLE, ellipsoid_wgs84
+from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84
 
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
@@ -256,7 +256,7 @@ def calc_swath(alt, nu):
         Returns swath in km"""
 
     # Convert to radians first.
-    nu = nu*DEG2RAD
+    nur = nu*DEG2RAD
 
     # Ok, this is an overly simplified approximation. It neglects the Earth curvature.
     # return alt*tan(nu)
@@ -266,9 +266,11 @@ def calc_swath(alt, nu):
     # rho is an angle between two lines: (sat - tangential to Earth) and (sat - Earth center)
     rho = asin(RE/(RE+alt))
 
-    epsilon = acos(sin(nu)/sin(rho))
-    lam = pi/2 - rho - epsilon
+    epsilon = acos(sin(nur)/sin(rho))
+    lam = pi/2 - nur - epsilon
     swath = RE*lam
+    print("calc_swath(alt=%f nu=%f/%f) => rho=%f/%f epsilon=%f/%f, lambda= %f/%f => swath=%f [km]" %
+    (alt, nu, nur, rho, rho*RAD2DEG, epsilon, epsilon*RAD2DEG, lam, lam*RAD2DEG, swath))
 
     return swath
 
@@ -408,7 +410,7 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     # TODO: Calculcate if this pass is northbound or southbound
 
     # Let's assume this is AVHRR instrument. Let's use its field of view angle.
-    fov = AVHRR_ANGLE
+    fov = AVHRR_FOV
 
     # Now calculate corner positions (use only the first method)
     swath = calc_swath(aos_lla[2], fov)

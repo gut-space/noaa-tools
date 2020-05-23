@@ -26,4 +26,6 @@ NOAA_PROCESSING_DELAY = 0.0
 
 # This is the FOV (field of view) angle for the observation instrument on NOAA sats for each side.
 # In simple words this is how far the camera can look sideways. The total viewing angle is this multipled by 2.
-AVHRR_ANGLE = 54.3
+# STK uses 54.3 degrees, however this source claims the FOV to be 55.37 and the swath being 2900km.
+# https://directory.eoportal.org/web/eoportal/satellite-missions/n/noaa-poes-series-5th-generation
+AVHRR_FOV = 55.37
