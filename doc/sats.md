@@ -22,3 +22,13 @@ Spectrum Band      	:     Lower Wavelength 	 : 1150 [Nanometers]   Upper Wavelen
   RESOLUTIONS:
       Resolution 1100 [Meters]
 Pattern type	: Rectangular
+
+
+Processing observation 2135:
+
+noaa-apt:
+cargo build && target/debug/noaa-apt --tle tle.txt --start-time "2020-08-09T05:54:02+00:00" --map yes 2135.wav
+
+noaa-tools:
+python -m noaatools.noaatools --file data/2135.png --tle tle.txt --aos "2020-08-09 05:54:02" --los "2020-08-09 06:05:40"
+

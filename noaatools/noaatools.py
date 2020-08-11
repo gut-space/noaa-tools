@@ -43,6 +43,16 @@ def method2enum(str):
         return georef.Method.PYMAP3D
     raise Exception("ERROR: Unable to understand %s, allowed values are SPHERICAL, OBLATE, PYMAP3D" % str)
 
+def load_tle(fname):
+    """Load TLE file and returns (str, str) tuple with the TLE lines"""
+    with open(fname, 'r') as file:
+        lines = file.readlines()
+    if len(lines) != 2 and len(lines) != 3:
+        raise ValueError("Invalid TLE file %s content, expected 2 or 3 lines" % len(lines))
+    if len(lines) == 2:
+        return lines[0].strip(), lines[1].strip()
+    return lines[1].strip(), lines[2].strip()
+
 if __name__ == "__main__":
 
     # These are the default parameters. Those are taken from satnogs project, observation 1276.
@@ -62,6 +72,7 @@ if __name__ == "__main__":
     parser.add_argument("--los", help="Specify Loss of signal as timestamp (default: %(default)s)", default=los, type=str)
     parser.add_argument("--tle1", help="First line of TLE (default: %(default)s)", default=tle1, type=str)
     parser.add_argument("--tle2", help="Second line of TLE (default: %(default)s)", default=tle2, type=str)
+    parser.add_argument("--tle", help="Filename with TLE data", default="", type=str)
     parser.add_argument("--method", help="Specify orbital position calculation method (SPHERICAL, OBLATE, PYMAP3D, default: %(default)s)", default=method, type=str)
     parser.add_argument("--satname", help="Specifies satellite name (default: %(default)s)", default=satname, type=str)
     parser.add_argument("--file", help="Specifies output file pattern (default: %(default)s)", default=imgname, type=str)
@@ -75,8 +86,18 @@ if __name__ == "__main__":
     satname = args.satname
     imgname = args.file
 
+    print("TLE=[%s]" % args.tle)
+    if len(args.tle):
+        tle1, tle2 = load_tle(args.tle)
+
+    print("TLE1=%s" % tle1)
+    print("TLE2=%s" % tle2)
+
     # Calculate orbital positions (AOS, LOS), the camera geometry and get the image corners
-    d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr = georef.georef(method, tle1, tle2, aos, los)
+    georef.georef_apt(method, tle1, tle2, aos, los, imgname)
+    sys.exit(1)
+
+    d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr = georef.georef(method, tle1, tle2, aos, los, imgname)
 
     # Now export the data to Cesium JavaScript
     outfile_js  = ".".join(imgname.split('.')[:-1]) + ".js"

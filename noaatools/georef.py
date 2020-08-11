@@ -9,6 +9,9 @@ from sgp4.io import twoline2rv
 from sgp4.earth_gravity import wgs72, wgs84
 from sgp4.api import jday, Satrec
 
+import cv2
+from noaatools import imageproc
+
 import numpy as np
 from pymap3d import ecef
 
@@ -89,11 +92,14 @@ def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
     # Now convert this to centuries. Don't ask me why.
     t = d / 36525.0
 
-    # Don't undersran
+    # Don't understand this part.
     g = 67310.54841 + (8640184.812866 + (0.093104 + (-6.2e-6) * t) * t) * t
     dg = 8640184.812866 + (0.093104 * 2.0 + (-6.2e-6 * 3.0) * t) * t
     theta = ((jd + fr) % 1.0 + g * _second % 1.0) * tau
     theta_dot = (1.0 + dg * _second / 36525.0) * tau
+
+    if theta > 2*pi:
+        theta = theta - 2*pi
     return theta, theta_dot
 
 def longitude_trunc(lon: float) -> float:
@@ -185,8 +191,13 @@ def teme2geodetic_oblate(x: float, y: float, z: float, t: datetime, ellipsoid: E
 
         phii=phi
 
-    jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
-    gmst = julianDateToGMST2(jd, fr)[0]
+    if type(t) == datetime:
+        jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
+        gmst = julianDateToGMST2(jd, fr)[0]
+    elif type(t) == float:
+        gmst = t
+    else:
+        raise ValueError("Incorrect parameter type of t")
 
     lon = atan2(y, x) - gmst # lambda-E
     lon = longitude_trunc(lon)
@@ -324,7 +335,39 @@ def teme2geodetic(method: Method, x: float, y: float, z: float, t: datetime):
         return teme2geodetic_pymap3d(x, y, z, t)
     raise Exception("Invalid calculation method: %s" % method)
 
-def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
+def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
+    """ This georeferencing method is roughly based on noaa-apt, see
+        https://noaa-apt.mbernardi.com.ar/"""
+
+    img = cv2.imread(imgfile)
+    height, width, _ = img.shape
+
+    # Convert date as a string datetime. Make sure to use UTC rather than the default (local timezone)
+    d1 = datetime.fromisoformat(aos_txt).replace(tzinfo=timezone.utc)
+    d2 = datetime.fromisoformat(los_txt).replace(tzinfo=timezone.utc)
+
+    # This approach uses new API 2.x which gives a slightly different results.
+    # In case of NOAA, the position is off by less than milimeter
+    sat = Satrec.twoline2rv(tle1, tle2)
+    jd, fr = jday(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
+
+    print("## AOS=%s" % d1)
+
+    print("## There are %d lines in the %s file." % (height, imgfile))
+    for i in range(0,height):
+        _, pos, _ = sat.sgp4(jd, fr)
+        gmst, _ = julianDateToGMST2(jd, fr)
+        lla = teme2geodetic_oblate(pos[0], pos[1], pos[2], gmst, ellipsoid_wgs84)
+        print("## %d of %d: t=%s result=%s gmst=%f lon=%f lat=%f alt=%f" % (i, height, d1, pos, gmst, lla[0], lla[1], lla[2]))
+        fr = fr + 0.5/86400.0
+
+        if (i == 10):
+            sys.exit(1)
+
+    return
+
+
+def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
     """ This is a naive georeferencing method:
         - calculates the sat location at AOS and LOS points (using )
     then calculates distance between them. """
