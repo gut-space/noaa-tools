@@ -251,13 +251,15 @@ def calc_azimuth(p1, p2):
     lat2 = p2[0] * DEG2RAD
     lon2 = -p2[1] * DEG2RAD
 
+    # print("### calc_azimuth(lat1=%f lon1=%f, lat2=%f, lon2=%f)" % (lat1, lon1, lat2, lon2))
+
     d = 2*asin(sqrt((sin((lat1-lat2)/2))**2 +  cos(lat1)*cos(lat2)*(sin((lon1-lon2)/2))**2))
 
     tc1 = acos((sin(lat2)-sin(lat1)*cos(d))/(sin(d)*cos(lat1)))
 
     tc1 = atan2(sin(lon1-lon2)*cos(lat2), cos(lat1)*sin(lat2)-sin(lat1)*cos(lat2)*cos(lon1-lon2))
-    if (tc1 < 0):
-        tc1 += 2*pi
+    #if (tc1 < 0):
+    #    tc1 += 2*pi
     if (tc1 > 2*pi):
         tc1 -= 2*pi
     return tc1*RAD2DEG
@@ -310,7 +312,7 @@ def radial_distance(lat1, lon1, bearing, distance):
 
 def calc_distance(lat1, lon1, lat2, lon2):
     """
-    Calculates distance between two (lat,lon) points. Return value is in km.
+    Calculates distance between two (lat,lon) points, expressed in rad. Return value is in km.
     """
     rlat1 = lat1*DEG2RAD
     rlon1 = lon1*DEG2RAD
@@ -334,6 +336,91 @@ def teme2geodetic(method: Method, x: float, y: float, z: float, t: datetime):
     if method == Method.PYMAP3D:
         return teme2geodetic_pymap3d(x, y, z, t)
     raise Exception("Invalid calculation method: %s" % method)
+
+def azimuth_apt(lat1, lon1, lat2, lon2):
+    """everythin in rad """
+    delta_lon = lon2 - lon1
+
+    az = sin(delta_lon) / ( cos(lat1)*tan(lat2) - sin(lat1)*cos(delta_lon) )
+
+    return az
+
+def distance_apt(lat1, lon1, lat2, lon2):
+
+    delta_lon = lon2 - lon1
+
+    cos_central_angle = sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(delta_lon)
+
+    cos_central_angle = max(cos_central_angle, -1)
+    cos_central_angle = min(cos_central_angle, 1)
+
+    return acos(cos_central_angle)
+
+
+def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, float):
+    """
+    latlon - a tuple of lat, lon, alt
+    start_latlon - a tuple of lat, lon, alt
+    ref_az - reference azimuth (in radians)
+    xres - horizontal resolution per pixel
+    yres - vertical resolution per pixel
+    """
+
+    az = calc_azimuth(start_latlon, latlon) * DEG2RAD
+    B = az - ref_az
+
+    # TODO: there's this weird shit in noaa-apt: map.rs:106
+    #
+    #    // Set maximum, otherwise we get wrapping problems I do not fully
+    #    // understand: opposite parts of the world are mapped to the same
+    #    // position because of the cyclic nature of sin(), cos(), etc.
+    #    let c = geo::distance(latlon, start_latlon).max(-PI/3.).min(PI/3.);
+    c1 = calc_distance(latlon[0]*RAD2DEG, latlon[1]*RAD2DEG, start_latlon[0]*RAD2DEG, start_latlon[1]*RAD2DEG) / RE
+    c11= distance_apt(latlon[0]*RAD2DEG, latlon[1]*RAD2DEG, start_latlon[0]*RAD2DEG, start_latlon[1]*RAD2DEG)
+    c2 = max(c1, -pi/3.0)
+    c = min(c2, pi/3.0)
+    print("### distance(latlon=(%f, %f), start_latlon=(%f, %f)) c1=%f c11=%f c2=%f c=%f" % (latlon[0], latlon[1], start_latlon[0], start_latlon[1], c1, c11, c2, c))
+
+    a = atan(cos(B) * tan(c))
+    b = asin(sin(B) * sin(c))
+
+    x = -b / xres
+    y = a / yres + yaw * x
+
+    print("### latlon_to_rel_px: ref_az=%f, az=%f, B=%f c=%f a=%f b=%f x=%f y=%f" % (ref_az, az, B, c, a, b, x, y))
+
+    return x,y
+
+def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positions):
+
+    start_latlon = sat_positions[0]
+    print("##### start_latlon=%f,%f" % (start_latlon[0], start_latlon[1]))
+
+    # Convert latlon to (x, y) to pixel coordinates
+    x1, y1 = latlon_to_rel_px(latlon1, start_latlon, ref_az, xres, yres, yaw)
+    x2, y2 = latlon_to_rel_px(latlon2, start_latlon, ref_az, xres, yres, yaw)
+
+    print("## draw_line: latlon1=(%f,%f) latlon2=(%f,%f), x1=%f y1=%f, x2=%f, y2=%f" % (latlon1[0], latlon1[1], latlon2[0], latlon2[1], x1, y1, x2, y2))
+
+    height, width, _ = image.shape
+
+    # Offset correction on y
+    est_y1 = int (min( max(y1, 0.), height - 1)) # make sue y1 is in <0...height-1> range
+    est_y2 = int (min( max(y2, 0.), height - 1))
+
+    print("### draw_line() est_y1=%d, est_y2=%d" % (est_y1, est_y2))
+
+    x1_offset, _ = latlon_to_rel_px(sat_positions[est_y1], start_latlon, ref_az, xres, yres, yaw)
+    x2_offset, _ = latlon_to_rel_px(sat_positions[est_y2], start_latlon, ref_az, xres, yres, yaw)
+    x1 -= x1_offset
+    x2 -= x2_offset
+
+    # See if at least one point is inside
+    if (x1 > -456 and x1 < 456 and y1 > 0. and y1 < height) or (x1 > -600. and x1 < 600. and y1 > 0. and y1 < height):
+
+        cv2.line(image, (x1 + 539,y1), (x2 + 539,y2) , (0,0,255), 5)
+        cv2.line(image, (x1 + 1579,y1), (x2 + 1579,y2) , (0,0,255), 5)
+
 
 def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
     """ This georeferencing method is roughly based on noaa-apt, see
@@ -359,7 +446,8 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
         _, pos, _ = sat.sgp4(jd, fr)
         gmst, _ = julianDateToGMST2(jd, fr)
         lla = teme2geodetic_oblate(pos[0], pos[1], pos[2], gmst, ellipsoid_wgs84)
-        if i % 10 == 9:
+        lla = (lla[0]*DEG2RAD, lla[1]*DEG2RAD, lla[2])
+        if i % 10 == 11:
             print("## %d of %d: t=%s result=%s gmst=%f lon=%f lat=%f alt=%f" % (i, height, d1, pos, gmst, lla[0], lla[1], lla[2]))
         # TODO: print timestamp
         sat_positions.append(lla) # degrees
@@ -367,14 +455,36 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
 
     rows = len(sat_positions)
     print("## %d positions calculated" % rows)
-    print("## Sat position for row 0: %f, %f" % (sat_positions[0][0]/180*pi, sat_positions[0][1]/180*pi)) # degrees
+    print("## Sat position for row 0: %f, %f" % (sat_positions[0][0], sat_positions[0][1])) # degrees
 
-    print("## Sat position for row %d: %f, %f" % (rows, sat_positions[rows -1 ][0]/180*pi, sat_positions[rows - 1][1]/180*pi))
+    print("## Sat position for row %d: %f, %f" % (rows, sat_positions[rows -1 ][0], sat_positions[rows - 1][1]))
 
-    az = calc_azimuth(sat_positions[0], sat_positions[-1])
+    ref_az = calc_azimuth(sat_positions[0], sat_positions[-1])*DEG2RAD
+    if (ref_az < 0):
+        ref_az += 2*pi
+
     dist = calc_distance(sat_positions[0][0], sat_positions[0][1], sat_positions[-1][0], sat_positions[-1][1])
+    dist /= RE
 
-    print("## azimuth=%f, dist=%f" % (az / 180*pi, dist / RE))
+    print("## azimuth=%f, dist=%f height=%f" % (ref_az / 180*pi, dist, height))
+
+    vscale = 1.0000 # vertical scale
+    hscale = 1.0000 # horizontal scale
+
+    yres = dist / float(height) / vscale
+    xres = 0.0005 / hscale
+    yaw = 0.0
+
+    print("## xres=%f, yres=%f, yaw=%f" % (xres, yres, yaw))
+
+    print("------------")
+
+    img_mod = draw_line(img, (53.91*DEG2RAD, 14.28*DEG2RAD), (44.92*DEG2RAD, 12.55*DEG2RAD), (0,0,255),
+                        ref_az, xres, yres, yaw, sat_positions)
+
+    cv2.imshow("Line",img_mod)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
