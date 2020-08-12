@@ -344,7 +344,6 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
 
     # Convert date as a string datetime. Make sure to use UTC rather than the default (local timezone)
     d1 = datetime.fromisoformat(aos_txt).replace(tzinfo=timezone.utc)
-    d2 = datetime.fromisoformat(los_txt).replace(tzinfo=timezone.utc)
 
     # This approach uses new API 2.x which gives a slightly different results.
     # In case of NOAA, the position is off by less than milimeter
@@ -353,18 +352,29 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
 
     print("## AOS=%s" % d1)
 
+    sat_positions = []
+
     print("## There are %d lines in the %s file." % (height, imgfile))
     for i in range(0,height):
         _, pos, _ = sat.sgp4(jd, fr)
         gmst, _ = julianDateToGMST2(jd, fr)
         lla = teme2geodetic_oblate(pos[0], pos[1], pos[2], gmst, ellipsoid_wgs84)
-        print("## %d of %d: t=%s result=%s gmst=%f lon=%f lat=%f alt=%f" % (i, height, d1, pos, gmst, lla[0], lla[1], lla[2]))
+        if i % 10 == 9:
+            print("## %d of %d: t=%s result=%s gmst=%f lon=%f lat=%f alt=%f" % (i, height, d1, pos, gmst, lla[0], lla[1], lla[2]))
+        # TODO: print timestamp
+        sat_positions.append(lla) # degrees
         fr = fr + 0.5/86400.0
 
-        if (i == 10):
-            sys.exit(1)
+    rows = len(sat_positions)
+    print("## %d positions calculated" % rows)
+    print("## Sat position for row 0: %f, %f" % (sat_positions[0][0]/180*pi, sat_positions[0][1]/180*pi)) # degrees
 
-    return
+    print("## Sat position for row %d: %f, %f" % (rows, sat_positions[rows -1 ][0]/180*pi, sat_positions[rows - 1][1]/180*pi))
+
+    az = calc_azimuth(sat_positions[0], sat_positions[-1])
+    dist = calc_distance(sat_positions[0][0], sat_positions[0][1], sat_positions[-1][0], sat_positions[-1][1])
+
+    print("## azimuth=%f, dist=%f" % (az / 180*pi, dist / RE))
 
 
 def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
