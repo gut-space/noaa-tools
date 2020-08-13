@@ -341,11 +341,12 @@ def azimuth_apt(lat1, lon1, lat2, lon2):
     """everythin in rad """
     delta_lon = lon2 - lon1
 
-    az = sin(delta_lon) / ( cos(lat1)*tan(lat2) - sin(lat1)*cos(delta_lon) )
+    az = atan2(sin(delta_lon), cos(lat1)*tan(lat2) - sin(lat1)*cos(delta_lon) )
 
     return az
 
 def distance_apt(lat1, lon1, lat2, lon2):
+    """ Everything in rad """
 
     delta_lon = lon2 - lon1
 
@@ -366,7 +367,8 @@ def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, f
     yres - vertical resolution per pixel
     """
 
-    az = calc_azimuth(start_latlon, latlon) * DEG2RAD
+    #az = calc_azimuth(start_latlon, latlon) * DEG2RAD  # <- this is broken
+    az = azimuth_apt(start_latlon[0], start_latlon[1], latlon[0], latlon[1])
     B = az - ref_az
 
     # TODO: there's this weird shit in noaa-apt: map.rs:106
@@ -379,13 +381,15 @@ def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, f
     c11= distance_apt(latlon[0]*RAD2DEG, latlon[1]*RAD2DEG, start_latlon[0]*RAD2DEG, start_latlon[1]*RAD2DEG)
     c2 = max(c1, -pi/3.0)
     c = min(c2, pi/3.0)
-    print("### distance(latlon=(%f, %f), start_latlon=(%f, %f)) c1=%f c11=%f c2=%f c=%f" % (latlon[0], latlon[1], start_latlon[0], start_latlon[1], c1, c11, c2, c))
+    #print("### distance(latlon=(%f, %f), start_latlon=(%f, %f)) c1=%f c11=%f c2=%f c=%f" % (latlon[0], latlon[1], start_latlon[0], start_latlon[1], c1, c11, c2, c))
 
     a = atan(cos(B) * tan(c))
     b = asin(sin(B) * sin(c))
 
     x = -b / xres
     y = a / yres + yaw * x
+
+    print("#### y_res=%f, yaw=%f" % (yres, yaw))
 
     print("### latlon_to_rel_px: ref_az=%f, az=%f, B=%f c=%f a=%f b=%f x=%f y=%f" % (ref_az, az, B, c, a, b, x, y))
 
@@ -394,7 +398,7 @@ def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, f
 def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positions):
 
     start_latlon = sat_positions[0]
-    print("##### start_latlon=%f,%f" % (start_latlon[0], start_latlon[1]))
+    # print("##### start_latlon=%f,%f" % (start_latlon[0], start_latlon[1]))
 
     # Convert latlon to (x, y) to pixel coordinates
     x1, y1 = latlon_to_rel_px(latlon1, start_latlon, ref_az, xres, yres, yaw)
@@ -408,18 +412,17 @@ def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positi
     est_y1 = int (min( max(y1, 0.), height - 1)) # make sue y1 is in <0...height-1> range
     est_y2 = int (min( max(y2, 0.), height - 1))
 
-    print("### draw_line() est_y1=%d, est_y2=%d" % (est_y1, est_y2))
-
     x1_offset, _ = latlon_to_rel_px(sat_positions[est_y1], start_latlon, ref_az, xres, yres, yaw)
     x2_offset, _ = latlon_to_rel_px(sat_positions[est_y2], start_latlon, ref_az, xres, yres, yaw)
     x1 -= x1_offset
     x2 -= x2_offset
 
+
     # See if at least one point is inside
     if (x1 > -456 and x1 < 456 and y1 > 0. and y1 < height) or (x1 > -600. and x1 < 600. and y1 > 0. and y1 < height):
 
-        cv2.line(image, (x1 + 539,y1), (x2 + 539,y2) , (0,0,255), 5)
-        cv2.line(image, (x1 + 1579,y1), (x2 + 1579,y2) , (0,0,255), 5)
+        cv2.line(image, (int(x1) + 539, int(y1) ), ( int(x2) + 539, int(y2) ) , (0,0,255), 5)
+        cv2.line(image, (int(x1) + 1579, int(y1)), ( int(x2) + 1579, int(y2) ) , (0,0,255), 5)
 
 
 def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
@@ -463,8 +466,7 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
     if (ref_az < 0):
         ref_az += 2*pi
 
-    dist = calc_distance(sat_positions[0][0], sat_positions[0][1], sat_positions[-1][0], sat_positions[-1][1])
-    dist /= RE
+    dist = distance_apt(sat_positions[0][0], sat_positions[0][1], sat_positions[-1][0], sat_positions[-1][1])
 
     print("## azimuth=%f, dist=%f height=%f" % (ref_az / 180*pi, dist, height))
 
@@ -479,10 +481,10 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
 
     print("------------")
 
-    img_mod = draw_line(img, (53.91*DEG2RAD, 14.28*DEG2RAD), (44.92*DEG2RAD, 12.55*DEG2RAD), (0,0,255),
-                        ref_az, xres, yres, yaw, sat_positions)
+    draw_line(img, (53.91*DEG2RAD, 14.28*DEG2RAD), (44.92*DEG2RAD, 12.55*DEG2RAD), (0,0,255),
+            ref_az, xres, yres, yaw, sat_positions)
 
-    cv2.imshow("Line",img_mod)
+    cv2.imshow("Line",img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
