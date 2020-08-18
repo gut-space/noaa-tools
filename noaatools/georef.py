@@ -533,6 +533,10 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+    outfile = imgfile.split('.')
+    outfile = '.'.join(outfile[:-1]) + '-overlay.png'
+    cv2.imwrite(outfile, img)
+    print("Overlay file written to %s." % outfile)
 
 def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
     """ This is a naive georeferencing method:
