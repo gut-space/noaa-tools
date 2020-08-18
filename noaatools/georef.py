@@ -395,7 +395,7 @@ def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, f
 
     return x,y
 
-def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positions, color = (0,255,255)):
+def draw_line(image, latlon1, latlon2, ref_az, xres, yres, yaw, sat_positions, color = (0,255,255)):
 
     start_latlon = sat_positions[0]
     # print("##### start_latlon=%f,%f" % (start_latlon[0], start_latlon[1]))
@@ -475,10 +475,9 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
         fr = fr + 0.5/86400.0
 
     rows = len(sat_positions)
-    print("## %d positions calculated" % rows)
-    print("## Sat position for row 0: %f, %f" % (sat_positions[0][0], sat_positions[0][1])) # degrees
-
-    print("## Sat position for row %d: %f, %f" % (rows, sat_positions[rows -1 ][0], sat_positions[rows - 1][1]))
+    # print("## %d positions calculated" % rows)
+    # print("## Sat position for row 0: %f, %f" % (sat_positions[0][0], sat_positions[0][1])) # degrees
+    # print("## Sat position for row %d: %f, %f" % (rows, sat_positions[rows -1 ][0], sat_positions[rows - 1][1]))
 
     ref_az = calc_azimuth(sat_positions[0], sat_positions[-1])*DEG2RAD
     if (ref_az < 0):
@@ -486,7 +485,7 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
 
     dist = distance_apt(sat_positions[0][0], sat_positions[0][1], sat_positions[-1][0], sat_positions[-1][1])
 
-    print("## azimuth=%f, dist=%f height=%f" % (ref_az / 180*pi, dist, height))
+    # print("## azimuth=%f, dist=%f height=%f" % (ref_az / 180*pi, dist, height))
 
     vscale = 1.0000 # vertical scale
     hscale = 1.0000 # horizontal scale
@@ -495,22 +494,40 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
     xres = 0.0005 / hscale
     yaw = 0.0
 
-    print("## xres=%f, yres=%f, yaw=%f" % (xres, yres, yaw))
+    # print("## xres=%f, yres=%f, yaw=%f" % (xres, yres, yaw))
+
+    draw_overlay = True
+    draw_grid = True
     draw_groundstation = True
 
-    print("------------")
+    if (draw_overlay):
+        lines = shpreader.read_shp("data/shp/countries3.shp", "")
+
+        for l in lines:
+
+            draw_line(img, (l[1]*DEG2RAD, l[0]*DEG2RAD), (l[3]*DEG2RAD, l[2]*DEG2RAD),
+                    ref_az, xres, yres, yaw, sat_positions, (0,255,255))
 
 
-    lines = shpreader.read_shp("data/shp/countries3.shp", "")
+    if (draw_grid):
+        # Draw meridians
+        delta_lat = 1
+        delta_lon = 5
+        for lon in range(0,360, delta_lon):
+            for lat in range(-90 + delta_lat, 90, delta_lat):
+                draw_line(img, (lat*DEG2RAD, lon*DEG2RAD), ( (lat-delta_lat)*DEG2RAD, lon*DEG2RAD ),
+                        ref_az, xres, yres, yaw, sat_positions, (255,255,0))
 
-    for l in lines:
-        if not len(l):
-            continue
+        # Draw parallels
+        delta_lat = 5
+        delta_lon = 1
+        for lat in range(-75, 90, delta_lat):
+            for lon in range(0 + delta_lon, 360 + delta_lon, delta_lon):
+                draw_line(img, (lat*DEG2RAD, (lon-delta_lon)*DEG2RAD), ( lat*DEG2RAD, lon*DEG2RAD ),
+                        ref_az, xres, yres, yaw, sat_positions, (255,255,0))
 
     if (draw_groundstation):
         draw_station(img, 54.3525*DEG2RAD, 18.5318*DEG2RAD, "TKiS-1", (60, 60, 255), ref_az, xres, yres, yaw, sat_positions)
-        draw_line(img, (l[1]*DEG2RAD, l[0]*DEG2RAD), (l[3]*DEG2RAD, l[2]*DEG2RAD), (0,0,255),
-                ref_az, xres, yres, yaw, sat_positions)
 
     cv2.imshow("Line",img)
     cv2.waitKey(0)
