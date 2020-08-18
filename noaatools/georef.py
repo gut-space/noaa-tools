@@ -428,6 +428,21 @@ def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positi
         cv2.line(image, (int(x1) + 1579, int(y1)), ( int(x2) + 1579, int(y2) ) , color, 1)
 
 
+def draw_station(image, lat, lon, name, color, ref_az, xres, yres, yaw, sat_positions):
+    start_latlon = sat_positions[0]
+    x, y = latlon_to_rel_px((lat, lon), start_latlon, ref_az, xres, yres, yaw)
+
+    height, _, _ = image.shape
+    est_y = int (min( max(y, 0.), height - 1)) # make sue y1 is in <0...height-1> range
+    x_offset, _ = latlon_to_rel_px(sat_positions[est_y], start_latlon, ref_az, xres, yres, yaw)
+    x -= x_offset
+
+    if (x > -456 and x < 456 and y > 0. and y < height):
+
+        # Draw on the left image
+        cv2.circle(image, (int(x) + 539, int(y) ), 5 , color, 3)
+
+
 def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
     """ This georeferencing method is roughly based on noaa-apt, see
         https://noaa-apt.mbernardi.com.ar/"""
@@ -481,6 +496,7 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
     yaw = 0.0
 
     print("## xres=%f, yres=%f, yaw=%f" % (xres, yres, yaw))
+    draw_groundstation = True
 
     print("------------")
 
@@ -491,6 +507,8 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
         if not len(l):
             continue
 
+    if (draw_groundstation):
+        draw_station(img, 54.3525*DEG2RAD, 18.5318*DEG2RAD, "TKiS-1", (60, 60, 255), ref_az, xres, yres, yaw, sat_positions)
         draw_line(img, (l[1]*DEG2RAD, l[0]*DEG2RAD), (l[3]*DEG2RAD, l[2]*DEG2RAD), (0,0,255),
                 ref_az, xres, yres, yaw, sat_positions)
 
