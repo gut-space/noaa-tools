@@ -395,7 +395,7 @@ def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, f
 
     return x,y
 
-def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positions):
+def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positions, color = (0,255,255)):
 
     start_latlon = sat_positions[0]
     # print("##### start_latlon=%f,%f" % (start_latlon[0], start_latlon[1]))
@@ -419,13 +419,13 @@ def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positi
 
 
     # See if at least one point is inside
-    if (x1 > -456 and x1 < 456 and y1 > 0. and y1 < height) or (x1 > -600. and x1 < 600. and y1 > 0. and y1 < height):
+    if (x1 > -456 and x1 < 456 and y1 > 0. and y1 < height) and (x2 > -456. and x2 < 456. and y2 > 0. and y2 < height):
 
         # Draw on the left image
-        cv2.line(image, (int(x1) + 539, int(y1) ), ( int(x2) + 539, int(y2) ) , (0,0,255), 2)
+        cv2.line(image, (int(x1) + 539, int(y1) ), ( int(x2) + 539, int(y2) ) , color, 1)
 
         # Draw on the right image
-        cv2.line(image, (int(x1) + 1579, int(y1)), ( int(x2) + 1579, int(y2) ) , (0,0,255), 2)
+        cv2.line(image, (int(x1) + 1579, int(y1)), ( int(x2) + 1579, int(y2) ) , color, 1)
 
 
 def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
