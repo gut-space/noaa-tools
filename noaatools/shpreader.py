@@ -1,7 +1,8 @@
 import shapefile
+import pprint
 
 def read_shp(fname: str, filter_country: str):
-    """Returns a list of lists of points"""
+    """Returns a list of lines. Each line is defined by [lat1, lon1, lat2, lon2] pair of floats."""
 
     # Read the shp file.
     shp = shapefile.Reader(fname)
@@ -9,7 +10,7 @@ def read_shp(fname: str, filter_country: str):
     # Get both the shapes and records
     shrecs = shp.shapeRecords()
 
-    countries = []
+    lines = []
 
     # For each pair of shapes and records
     for c in shrecs:
@@ -18,14 +19,20 @@ def read_shp(fname: str, filter_country: str):
         # https://www.naturalearthdata.com), the administrative name is in column 8.
         if c.record[8] == filter_country or not filter_country:
 
-            points = []
-            # Now iterate over all points.
+            parts = c.shape.parts
+            # For example, for Finland we get this: [0, 400, 406, 411, 422, 427, 433, 438, 446, 450, 458, 463]
+            # It should be interpreted as 11 polygond. The first contains points from 0 to 399. The second from
+            # 400 to 405, etc.
+            prv = c.shape.points[0]
+            index = 0
             for coord in c.shape.points:
-                points.append([coord[0], coord[1]])
+                if (index not in parts):
+                    lines.append([coord[0], coord[1], prv[0], prv[1]])
+                prv = coord
+                index += 1
 
-            countries.append(points)
-
-    return countries
+    print("Returned %d lines" % len(lines))
+    return lines
 
 # Here's an example code that uses the function above:
 #

@@ -422,10 +422,10 @@ def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positi
     if (x1 > -456 and x1 < 456 and y1 > 0. and y1 < height) or (x1 > -600. and x1 < 600. and y1 > 0. and y1 < height):
 
         # Draw on the left image
-        cv2.line(image, (int(x1) + 539, int(y1) ), ( int(x2) + 539, int(y2) ) , (0,0,255), 1)
+        cv2.line(image, (int(x1) + 539, int(y1) ), ( int(x2) + 539, int(y2) ) , (0,0,255), 2)
 
         # Draw on the right image
-        cv2.line(image, (int(x1) + 1579, int(y1)), ( int(x2) + 1579, int(y2) ) , (0,0,255), 1)
+        cv2.line(image, (int(x1) + 1579, int(y1)), ( int(x2) + 1579, int(y2) ) , (0,0,255), 2)
 
 
 def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
@@ -485,16 +485,14 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
     print("------------")
 
 
-    polygons = shpreader.read_shp("data/shp/countries3.shp", "Italy")
+    lines = shpreader.read_shp("data/shp/countries3.shp", "Italy")
 
-    for pol in polygons:
-        if not len(pol):
+    for l in lines:
+        if not len(l):
             continue
-        prv = pol[0]
-        for p in pol:
-            draw_line(img, (p[1]*DEG2RAD, p[0]*DEG2RAD), (prv[1]*DEG2RAD, prv[0]*DEG2RAD), (0,0,255),
-                    ref_az, xres, yres, yaw, sat_positions)
-            prv = p
+
+        draw_line(img, (l[1]*DEG2RAD, l[0]*DEG2RAD), (l[3]*DEG2RAD, l[2]*DEG2RAD), (0,0,255),
+                ref_az, xres, yres, yaw, sat_positions)
 
     cv2.imshow("Line",img)
     cv2.waitKey(0)
