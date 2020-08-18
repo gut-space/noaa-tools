@@ -10,7 +10,7 @@ from sgp4.earth_gravity import wgs72, wgs84
 from sgp4.api import jday, Satrec
 
 import cv2
-from noaatools import imageproc
+from noaatools import imageproc, shpreader
 
 import numpy as np
 from pymap3d import ecef
@@ -481,8 +481,14 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
 
     print("------------")
 
-    draw_line(img, (53.91*DEG2RAD, 14.28*DEG2RAD), (44.92*DEG2RAD, 12.55*DEG2RAD), (0,0,255),
-            ref_az, xres, yres, yaw, sat_positions)
+
+    points = shpreader.read_shp("data/shp/countries3.shp", "Poland")
+
+    prv = points[0]
+    for p in points:
+        draw_line(img, (p[1]*DEG2RAD, p[0]*DEG2RAD), (prv[1]*DEG2RAD, prv[0]*DEG2RAD), (0,0,255),
+                  ref_az, xres, yres, yaw, sat_positions)
+        prv = p
 
     cv2.imshow("Line",img)
     cv2.waitKey(0)
