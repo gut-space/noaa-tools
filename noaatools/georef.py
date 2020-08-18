@@ -389,9 +389,9 @@ def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, f
     x = -b / xres
     y = a / yres + yaw * x
 
-    print("#### y_res=%f, yaw=%f" % (yres, yaw))
+    # print("#### y_res=%f, yaw=%f" % (yres, yaw))
 
-    print("### latlon_to_rel_px: ref_az=%f, az=%f, B=%f c=%f a=%f b=%f x=%f y=%f" % (ref_az, az, B, c, a, b, x, y))
+    # print("### latlon_to_rel_px: ref_az=%f, az=%f, B=%f c=%f a=%f b=%f x=%f y=%f" % (ref_az, az, B, c, a, b, x, y))
 
     return x,y
 
@@ -404,7 +404,7 @@ def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positi
     x1, y1 = latlon_to_rel_px(latlon1, start_latlon, ref_az, xres, yres, yaw)
     x2, y2 = latlon_to_rel_px(latlon2, start_latlon, ref_az, xres, yres, yaw)
 
-    print("## draw_line: latlon1=(%f,%f) latlon2=(%f,%f), x1=%f y1=%f, x2=%f, y2=%f" % (latlon1[0], latlon1[1], latlon2[0], latlon2[1], x1, y1, x2, y2))
+    # print("### draw_line: latlon1=(%f,%f) latlon2=(%f,%f), x1=%f y1=%f, x2=%f, y2=%f" % (latlon1[0], latlon1[1], latlon2[0], latlon2[1], x1, y1, x2, y2))
 
     height, width, _ = image.shape
 
@@ -421,8 +421,11 @@ def draw_line(image, latlon1, latlon2, rgba, ref_az, xres, yres, yaw, sat_positi
     # See if at least one point is inside
     if (x1 > -456 and x1 < 456 and y1 > 0. and y1 < height) or (x1 > -600. and x1 < 600. and y1 > 0. and y1 < height):
 
-        cv2.line(image, (int(x1) + 539, int(y1) ), ( int(x2) + 539, int(y2) ) , (0,0,255), 5)
-        cv2.line(image, (int(x1) + 1579, int(y1)), ( int(x2) + 1579, int(y2) ) , (0,0,255), 5)
+        # Draw on the left image
+        cv2.line(image, (int(x1) + 539, int(y1) ), ( int(x2) + 539, int(y2) ) , (0,0,255), 1)
+
+        # Draw on the right image
+        cv2.line(image, (int(x1) + 1579, int(y1)), ( int(x2) + 1579, int(y2) ) , (0,0,255), 1)
 
 
 def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
@@ -482,13 +485,16 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
     print("------------")
 
 
-    points = shpreader.read_shp("data/shp/countries3.shp", "Poland")
+    polygons = shpreader.read_shp("data/shp/countries3.shp", "Italy")
 
-    prv = points[0]
-    for p in points:
-        draw_line(img, (p[1]*DEG2RAD, p[0]*DEG2RAD), (prv[1]*DEG2RAD, prv[0]*DEG2RAD), (0,0,255),
-                  ref_az, xres, yres, yaw, sat_positions)
-        prv = p
+    for pol in polygons:
+        if not len(pol):
+            continue
+        prv = pol[0]
+        for p in pol:
+            draw_line(img, (p[1]*DEG2RAD, p[0]*DEG2RAD), (prv[1]*DEG2RAD, prv[0]*DEG2RAD), (0,0,255),
+                    ref_az, xres, yres, yaw, sat_positions)
+            prv = p
 
     cv2.imshow("Line",img)
     cv2.waitKey(0)
