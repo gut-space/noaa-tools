@@ -485,7 +485,7 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
     print("------------")
 
 
-    lines = shpreader.read_shp("data/shp/countries3.shp", "Italy")
+    lines = shpreader.read_shp("data/shp/countries3.shp", "")
 
     for l in lines:
         if not len(l):

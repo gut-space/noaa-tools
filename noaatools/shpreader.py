@@ -13,16 +13,21 @@ def read_shp(fname: str, filter_country: str):
     lines = []
 
     # For each pair of shapes and records
+    i = 0
     for c in shrecs:
         # check if it's the country We're looking for.
         # c.record has a ton of different records. This is .shp specific. In this particular case (we imported the data from
         # https://www.naturalearthdata.com), the administrative name is in column 8.
         if c.record[8] == filter_country or not filter_country:
 
+            #print("Processing country %d: %s" % (i, c.record[8]))
+            i += 1
             parts = c.shape.parts
             # For example, for Finland we get this: [0, 400, 406, 411, 422, 427, 433, 438, 446, 450, 458, 463]
             # It should be interpreted as 11 polygond. The first contains points from 0 to 399. The second from
             # 400 to 405, etc.
+            if not len(c.shape.points):
+                continue # Monaco is so small it doesn't have any points.
             prv = c.shape.points[0]
             index = 0
             for coord in c.shape.points:
