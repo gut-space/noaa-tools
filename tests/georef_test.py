@@ -111,18 +111,17 @@ class Georefests(unittest.TestCase):
                      [54, 19, 55, 18, 128.72457677],
                      [54, 19, 51, 0, 1325.7042000] ] # Gdansk to London
 
-        print("")
-
         for c in expected:
             self.assertAlmostEqual(georef.calc_distance(c[0]*DEG2RAD, c[1]*DEG2RAD, c[2]*DEG2RAD, c[3]*DEG2RAD)*RE, c[4])
             self.assertAlmostEqual(georef.distance_apt(c[0]*DEG2RAD, c[1]*DEG2RAD, c[2]*DEG2RAD, c[3]*DEG2RAD)*RE, c[4])
 
-            az1 = float('nan')
-            az2 = float('nan')
+            # Calculate azimuth using two different methods:
             az1 = georef.azimuth_apt(c[0]*DEG2RAD, c[1]*DEG2RAD, c[2]*DEG2RAD, c[3]*DEG2RAD)*RAD2DEG
-            az2 = georef.calc_azimuth([c[0]*DEG2RAD, c[1]*DEG2RAD], [c[2]*DEG2RAD, c[3]*DEG2RAD])
+            az2 = georef.calc_azimuth([c[0]*DEG2RAD, c[1]*DEG2RAD], [c[2]*DEG2RAD, c[3]*DEG2RAD])*RAD2DEG
 
-            print("[%f,%f] -> [%f,%f] az1=%f az2=%f" % (c[0], c[1], c[2], c[3], az1, az2))
+            # And check if they're almost equal
+            self.assertAlmostEqual(az1, az2)
+            #print("[%f,%f] -> [%f,%f] az1=%f az2=%f" % (c[0], c[1], c[2], c[3], az1, az2))
 
     def test_longitude_trunc(self):
         self.assertAlmostEqual(georef.longitude_trunc(0), 0)

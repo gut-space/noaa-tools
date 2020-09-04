@@ -227,16 +227,17 @@ def get_ssp(lla):
 
 def calc_azimuth(p1, p2):
     """ Calculates azimuth from point 1 to point 2.
-    Point - an array 3 of floats (LLA)
-    Returns azimuth in degrees
+    p1 - an array 3 of floats (LLA) (in radians)
+    p2 - an array 3 of floats (LLA) (in radians)
+    Returns azimuth in rads.
 
     Source: http://edwilliams.org/avform.htm#Crs
     """
 
-    lat1 = p1[0] * DEG2RAD
-    lon1 = -p1[1] * DEG2RAD
-    lat2 = p2[0] * DEG2RAD
-    lon2 = -p2[1] * DEG2RAD
+    lat1 = p1[0]
+    lon1 = -p1[1]
+    lat2 = p2[0]
+    lon2 = -p2[1]
 
     #d = 2*asin(sqrt((sin((lat1-lat2)/2))**2 +  cos(lat1)*cos(lat2)*(sin((lon1-lon2)/2))**2))
 
@@ -245,16 +246,14 @@ def calc_azimuth(p1, p2):
     # Special case: the points are on the same meridian (lon1=lon2):
     if (lon1 == lon2):
         if (lat1 > lat2):
-            return pi*RAD2DEG
+            return pi
         elif (lat1 < lat2):
             return 0
         else:
             raise ValueError("Can't calculate azimuth between two equal points")
 
     tc1 = atan2(sin(lon1-lon2)*cos(lat2), cos(lat1)*sin(lat2)-sin(lat1)*cos(lat2)*cos(lon1-lon2))
-    tc1 = tc1 % (2*pi)
-
-    return tc1*RAD2DEG
+    return tc1 % (2*pi)
 
 def calc_swath(alt, nu):
     """This calculates the swath width, given the altitude (alt, in km) of the sat and camera angle (nu, in radians).
@@ -464,7 +463,7 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
     # print("## Sat position for row 0: %f, %f" % (sat_positions[0][0], sat_positions[0][1])) # degrees
     # print("## Sat position for row %d: %f, %f" % (rows, sat_positions[rows -1 ][0], sat_positions[rows - 1][1]))
 
-    ref_az = calc_azimuth(sat_positions[0], sat_positions[-1])*DEG2RAD
+    ref_az = calc_azimuth(sat_positions[0], sat_positions[-1])
     if (ref_az < 0):
         ref_az += 2*pi
 
