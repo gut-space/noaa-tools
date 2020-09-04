@@ -18,7 +18,7 @@ from pymap3d import ecef
 
 sys.path.append('.')
 from noaatools import export_js
-from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84, SIDEREAL_DAY_SECS
+from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84, SIDEREAL_DAY_SECS, TAU
 
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
@@ -48,7 +48,6 @@ def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
 
     From AIAA 2006-6753 Appendix C.
     """
-    tau = 6.283185307179586476925287
 
     _second = 1.0 / (24.0 * 60.0 * 60.0)
 
@@ -64,8 +63,8 @@ def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
     # Don't understand this part.
     g = 67310.54841 + (8640184.812866 + (0.093104 + (-6.2e-6) * t) * t) * t
     dg = 8640184.812866 + (0.093104 * 2.0 + (-6.2e-6 * 3.0) * t) * t
-    theta = ((jd + fr) % 1.0 + g * _second % 1.0) * tau
-    theta_dot = (1.0 + dg * _second / 36525.0) * tau
+    theta = ((jd + fr) % 1.0 + g * _second % 1.0) * TAU
+    theta_dot = (1.0 + dg * _second / 36525.0) * TAU
 
     while (theta > 2*pi):
         theta = theta - 2*pi
@@ -77,9 +76,8 @@ def rad2hms(gmst: float) -> Tuple[int, int, float, float]:
     The H and M are integers, the S is float, the H2 is float as well.
     For example, the response 7.3023135 = 7h 18m 8.33s would be represented
     as 7, 18, 8.33, 7.302315"""
-    tau = 6.283185307179586476925287
 
-    gmst = gmst / tau * 24.0 # convert to 0-24h timescale
+    gmst = gmst / TAU * 24.0 # convert to 0-24h timescale
     while (gmst > 24):
         gmst -= 24
 

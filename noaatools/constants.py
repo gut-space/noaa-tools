@@ -5,6 +5,9 @@ from collections import namedtuple
 DEG2RAD = 0.017453292519943296
 RAD2DEG = 57.295779513082321
 
+# 2 * pi
+TAU = 6.283185307179586476925287
+
 RE = 6378.137 # Earth radius (in km)
 
 # Sidereal day length is 23h 56m 4.0905s
