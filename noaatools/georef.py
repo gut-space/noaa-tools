@@ -466,6 +466,9 @@ def draw_station(image, lat, lon, name, color, ref_az, xres, yres, yaw, sat_posi
         # Draw on the left image
         cv2.circle(image, (int(x) + 539, int(y) ), 5 , color, 3)
 
+        # and on the right one, too
+        cv2.circle(image, (int(x) + 1579, int(y) ), 5 , color, 3)
+
 
 def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, imgfile: str):
     """ This georeferencing method is roughly based on noaa-apt, see
