@@ -12,12 +12,13 @@ from sgp4.api import jday, Satrec
 import cv2
 from noaatools import imageproc, shpreader
 
+import math
 import numpy as np
 from pymap3d import ecef
 
 sys.path.append('.')
 from noaatools import export_js
-from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84
+from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84, SIDEREAL_DAY_SECS
 
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
@@ -52,7 +53,12 @@ def julianDateToGMST(jd, fr):
 
     # Let's truncate this and return the value in degrees.
     # This is clearly broken.
-    return (gmst % 24)*(15/3600.0)
+    gmst = gmst # / SIDEREAL_DAY_SECS * 2*pi
+    while (gmst > 2*pi):
+        gmst -= 2*pi
+
+    return gmst
+    #return (gmst % 24)*(15/3600.0)
 
 def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
     """
@@ -101,6 +107,24 @@ def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
     while (theta > 2*pi):
         theta = theta - 2*pi
     return theta, theta_dot
+
+def rad2hms(gmst: float) -> Tuple[int, int, float, float]:
+    """
+    Takes an angle (in radians) and turns a tuple of [H,M,S,H]
+    The H and M are integers, the S is float, the H2 is float as well.
+    For example, the response 7.3023135 = 7h 18m 8.33s would be represented
+    as 7, 18, 8.33, 7.302315"""
+    tau = 6.283185307179586476925287
+
+    gmst = gmst / tau * 24.0 # convert to 0-24h timescale
+    while (gmst > 24):
+        gmst -= 24
+
+    h = math.floor(gmst)
+    m = math.floor((gmst - h)*60)
+    s = ((gmst - h)*60 - m)*60
+
+    return h,m,s,gmst
 
 def longitude_trunc(lon: float) -> float:
     """

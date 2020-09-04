@@ -7,6 +7,9 @@ RAD2DEG = 57.295779513082321
 
 RE = 6378.137 # Earth radius (in km)
 
+# Sidereal day length is 23h 56m 4.0905s
+SIDEREAL_DAY_SECS = 23*3600 + 56*60 + 4
+
 class Method(Enum):
     SPHERICAL = 1
     OBLATE = 2

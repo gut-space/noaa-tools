@@ -2,6 +2,7 @@ from noaatools import georef
 from math import pi
 import unittest
 import pytest
+from sgp4.api import jday
 
 class Georefests(unittest.TestCase):
     def test_ellipsoids(self):
@@ -11,6 +12,53 @@ class Georefests(unittest.TestCase):
         self.assertEqual(x.a, 6378.137)
         self.assertEqual(x.finv, 298.257223563)
 
+
+    def test_julian_date(self):
+        # Test set borrowed from here: https://www.astro.umd.edu/~jph/GST_eqn.pdf
+
+        # input: year, month, day, h,m,s, expected output: h,m,s, h(float)
+        # Test set borrowed from here: https://www.astro.umd.edu/~jph/GST_eqn.pdf
+        expected = [ [2001, 10, 3, 6, 30, 0, 7, 18, 8.32867640, 7.3023135]]
+
+        for case in expected:
+
+            # Convert calendar date to julian date
+            jd, fr = jday(case[0], case[1], case[2], case[3], case[4], case[5])
+
+            # Then calculate Greenwich Mean Sidereal Time
+
+            gmst2 = georef.julianDateToGMST2(jd, fr)
+            gmst2 = gmst2[0] # julianDateToGSMT2 returns theta and theta_dot, we want just the former
+            hms2 = georef.rad2hms(gmst2)
+
+            #print("#### jd=%f fr=%f sum=%f gmst=%f, gmst2=%f hms=%s hms2=%s" % (jd, fr, jd+fr, gmst, gmst2, hms, hms2))
+
+            self.assertAlmostEqual(hms2[0], case[6])
+            self.assertAlmostEqual(hms2[1], case[7])
+            self.assertAlmostEqual(hms2[2], case[8])
+            self.assertAlmostEqual(hms2[3], case[9])
+
+            # TODO: Add checks for julianDateToGMST
+            #gmst = georef.julianDateToGMST(jd, fr)
+            #hms = georef.rad2hms(gmst)
+            #self.assertAlmostEqual(hms[0], case[6])
+            #self.assertAlmostEqual(hms[1], case[7])
+            #self.assertAlmostEqual(hms[2], case[8])
+            #self.assertAlmostEqual(hms[3], case[9])
+
+    def test_rad2hms(self):
+        """This test verifies if the RA (expressed in radians can be properly converted to h:m:s)."""
+
+        # Test set borrowed from here: https://www.astro.umd.edu/~jph/GST_eqn.pdf
+        expected = [ [7.3023135/24*2*pi, 7, 18, 8.3286, 7.3023135]]
+
+        for case in expected:
+            h,m,s,gmst = georef.rad2hms(case[0])
+
+            self.assertAlmostEqual(h, case[1])
+            self.assertAlmostEqual(m, case[2])
+            self.assertAlmostEqual(s, case[3])
+            self.assertAlmostEqual(gmst, case[4])
 
     def test_theta(self):
         """This test verifies if julian date conversion to Greenwich Mean Sidreal Time is correct."""
@@ -43,12 +91,14 @@ class Georefests(unittest.TestCase):
         for case in expected:
             exp = case[1]
             act = georef.julianDateToGMST2(case[0], 0.0)
+            act2 = georef.julianDateToGMST(case[0], 0.0)
 
             if type(act) is tuple:
                 act = act[0]
             if (abs(exp - act) > 0.000004):
                 print("Checking case for jd=%f expected=%f noaatools=%f (diff=%f)" % (case[0], exp, act, abs(exp - act)) )
                 self.assertAlmostEqual(exp, act)
+            print("JD=%f GMST=%f, GMST2=%f, delta=%f" % (case[0], act2, act, act-act2))
 
     def test_calc_distance(self):
         self.assertAlmostEqual(georef.calc_distance(54, 18, 54, 19), 65.43141141)
