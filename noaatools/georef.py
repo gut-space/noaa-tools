@@ -98,7 +98,7 @@ def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
     theta = ((jd + fr) % 1.0 + g * _second % 1.0) * tau
     theta_dot = (1.0 + dg * _second / 36525.0) * tau
 
-    if theta > 2*pi:
+    while (theta > 2*pi):
         theta = theta - 2*pi
     return theta, theta_dot
 
