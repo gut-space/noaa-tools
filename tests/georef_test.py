@@ -1,4 +1,6 @@
 from noaatools import georef
+from noaatools.georef import DEG2RAD, RAD2DEG, RE
+
 from math import pi
 import unittest
 import pytest
@@ -100,13 +102,36 @@ class Georefests(unittest.TestCase):
                 self.assertAlmostEqual(exp, act)
             print("JD=%f GMST=%f, GMST2=%f, delta=%f" % (case[0], act2, act, act-act2))
 
-    def test_calc_distance(self):
-        self.assertAlmostEqual(georef.calc_distance(54, 18, 54, 19), 65.43141141)
-        self.assertAlmostEqual(georef.calc_distance(54, 18, 54, 17), 65.43141141)
-        self.assertAlmostEqual(georef.calc_distance(54, 18, 53, 18), 111.31949079)
-        self.assertAlmostEqual(georef.calc_distance(54, 19, 55, 18), 128.72457677)
-        self.assertAlmostEqual(georef.calc_distance(54, 19, 51, 0), 1325.7042000) # Gdansk to London
+    def test_calc_distance_azimuth(self):
+        # lat1, lon1, lat2, lon2 (all in degrees), expected distance in km
+        expected = [ [54, 18, 54, 19, 65.43141141], # East
+                     [54, 18, 53, 18, 111.31949079], # South
+                     [54, 19, 54, 18, 65.43141141], # West
+                     [53, 18, 54, 18, 111.31949079], # North
+                     [54, 19, 55, 18, 128.72457677],
+                     [54, 19, 51, 0, 1325.7042000] ] # Gdansk to London
 
+        print("")
+
+        for c in expected:
+            self.assertAlmostEqual(georef.calc_distance(c[0]*DEG2RAD, c[1]*DEG2RAD, c[2]*DEG2RAD, c[3]*DEG2RAD)*RE, c[4])
+            self.assertAlmostEqual(georef.distance_apt(c[0]*DEG2RAD, c[1]*DEG2RAD, c[2]*DEG2RAD, c[3]*DEG2RAD)*RE, c[4])
+
+            az1 = float('nan')
+            az2 = float('nan')
+            az1 = georef.azimuth_apt(c[0]*DEG2RAD, c[1]*DEG2RAD, c[2]*DEG2RAD, c[3]*DEG2RAD)*RAD2DEG
+            az2 = georef.calc_azimuth([c[0]*DEG2RAD, c[1]*DEG2RAD], [c[2]*DEG2RAD, c[3]*DEG2RAD])
+            try:
+                az3 = georef.azimuth_apt(c[0], c[1], c[2], c[3])
+            except ValueError:
+                print("azimuth_apt failed for the following input: %s" % c)
+            try:
+                az4 = georef.calc_azimuth([c[0], c[1]], [c[2], c[3]])
+            except BadValue:
+                print("!!!! calc_azimuth failed for the following input: %s" % c)
+
+
+            print("%s az1=%f az2=%f\n" % (c, az1, az2))
 
     def test_longitude_trunc(self):
         self.assertAlmostEqual(georef.longitude_trunc(0), 0)

@@ -23,43 +23,6 @@ from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCES
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
 
-def julianDateToGMST(jd, fr):
-    """
-    Converts Julian date (expressed at two floats) to GMST (Greenwich Mean Sidereal Time).
-
-    Parameters:
-    jd : float - Julian date full integer + 0.5
-    fr : float - fractional part of the Julian date
-
-    Returns
-    =======
-    A single floating point representing a GMST, expressed in degrees (0...359.99999).
-
-    This calculation takes into consideration the precession, but not nutation.
-
-    Source: https://www.cv.nrao.edu/~rfisher/Ephemerides/times.html#GMST
-    """
-    T0 = 2451545.0 # J2000, 2000-Jan-01 12h UT1 as Julian date
-
-    # First calculate number of days since J2000 (2000-Jan-01 12h UT1)
-    d = jd - T0
-    d = d + fr
-
-    # Now convert this to centuries. Don't ask me why.
-    T = d / 36525.0
-
-    # Calculate GMST (in seconds at UT1=0)
-    gmst = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T*T*T
-
-    # Let's truncate this and return the value in degrees.
-    # This is clearly broken.
-    gmst = gmst # / SIDEREAL_DAY_SECS * 2*pi
-    while (gmst > 2*pi):
-        gmst -= 2*pi
-
-    return gmst
-    #return (gmst % 24)*(15/3600.0)
-
 def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
     """
     Converts Julian date (expressed at two floats) to GMST (Greenwich Mean Sidereal Time 1982).
@@ -275,17 +238,22 @@ def calc_azimuth(p1, p2):
     lat2 = p2[0] * DEG2RAD
     lon2 = -p2[1] * DEG2RAD
 
-    # print("### calc_azimuth(lat1=%f lon1=%f, lat2=%f, lon2=%f)" % (lat1, lon1, lat2, lon2))
+    #d = 2*asin(sqrt((sin((lat1-lat2)/2))**2 +  cos(lat1)*cos(lat2)*(sin((lon1-lon2)/2))**2))
 
-    d = 2*asin(sqrt((sin((lat1-lat2)/2))**2 +  cos(lat1)*cos(lat2)*(sin((lon1-lon2)/2))**2))
+    #tc1 = acos((sin(lat2)-sin(lat1)*cos(d))/(sin(d)*cos(lat1)))
 
-    tc1 = acos((sin(lat2)-sin(lat1)*cos(d))/(sin(d)*cos(lat1)))
+    # Special case: the points are on the same meridian (lon1=lon2):
+    if (lon1 == lon2):
+        if (lat1 > lat2):
+            return pi*RAD2DEG
+        elif (lat1 < lat2):
+            return 0
+        else:
+            raise ValueError("Can't calculate azimuth between two equal points")
 
     tc1 = atan2(sin(lon1-lon2)*cos(lat2), cos(lat1)*sin(lat2)-sin(lat1)*cos(lat2)*cos(lon1-lon2))
-    #if (tc1 < 0):
-    #    tc1 += 2*pi
-    if (tc1 > 2*pi):
-        tc1 -= 2*pi
+    tc1 = tc1 % (2*pi)
+
     return tc1*RAD2DEG
 
 def calc_swath(alt, nu):
@@ -335,17 +303,21 @@ def radial_distance(lat1, lon1, bearing, distance):
     return (rlat*RAD2DEG, rlon*RAD2DEG)
 
 def calc_distance(lat1, lon1, lat2, lon2):
-    """
-    Calculates distance between two (lat,lon) points, expressed in rad. Return value is in km.
-    """
-    rlat1 = lat1*DEG2RAD
-    rlon1 = lon1*DEG2RAD
-    rlat2 = lat2*DEG2RAD
-    rlon2 = lon2*DEG2RAD
+    """ Calculates distance between two (lat,lon) points, expressed in rad. Return value is in radians. """
 
-    d = 2 * asin(sqrt((sin((rlat1-rlat2)/2))**2 + cos(rlat1)*cos(rlat2)*(sin((rlon1-rlon2)/2))**2))
+    return 2 * asin(sqrt((sin((lat1-lat2)/2))**2 + cos(lat1)*cos(lat2)*(sin((lon1-lon2)/2))**2))
 
-    return d * RE
+def distance_apt(lat1, lon1, lat2, lon2):
+    """ Calculates distance between (lat1,lon1) and (lat2, lon2). Everything expressed in radians. """
+
+    delta_lon = lon2 - lon1
+
+    cos_central_angle = sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(delta_lon)
+
+    cos_central_angle = max(cos_central_angle, -1)
+    cos_central_angle = min(cos_central_angle, 1)
+
+    return acos(cos_central_angle)
 
 def azimuth_add(az, delta):
     """ Adds delta to specified azimuth. Does the modulo 360 arithmetic"""
@@ -369,19 +341,6 @@ def azimuth_apt(lat1, lon1, lat2, lon2):
 
     return az
 
-def distance_apt(lat1, lon1, lat2, lon2):
-    """ Everything in rad """
-
-    delta_lon = lon2 - lon1
-
-    cos_central_angle = sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(delta_lon)
-
-    cos_central_angle = max(cos_central_angle, -1)
-    cos_central_angle = min(cos_central_angle, 1)
-
-    return acos(cos_central_angle)
-
-
 def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, float):
     """
     latlon - a tuple of lat, lon, alt
@@ -391,7 +350,7 @@ def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, f
     yres - vertical resolution per pixel
     """
 
-    #az = calc_azimuth(start_latlon, latlon) * DEG2RAD  # <- this is broken
+    # TODO: migrate this to calc_azimuth
     az = azimuth_apt(start_latlon[0], start_latlon[1], latlon[0], latlon[1])
     B = az - ref_az
 
@@ -401,8 +360,7 @@ def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, f
     #    // understand: opposite parts of the world are mapped to the same
     #    // position because of the cyclic nature of sin(), cos(), etc.
     #    let c = geo::distance(latlon, start_latlon).max(-PI/3.).min(PI/3.);
-    c1 = calc_distance(latlon[0]*RAD2DEG, latlon[1]*RAD2DEG, start_latlon[0]*RAD2DEG, start_latlon[1]*RAD2DEG) / RE
-    c11= distance_apt(latlon[0]*RAD2DEG, latlon[1]*RAD2DEG, start_latlon[0]*RAD2DEG, start_latlon[1]*RAD2DEG)
+    c1 = calc_distance(latlon[0], latlon[1], start_latlon[0], start_latlon[1])
     c2 = max(c1, -pi/3.0)
     c = min(c2, pi/3.0)
     #print("### distance(latlon=(%f, %f), start_latlon=(%f, %f)) c1=%f c11=%f c2=%f c=%f" % (latlon[0], latlon[1], start_latlon[0], start_latlon[1], c1, c11, c2, c))
@@ -673,3 +631,45 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str, img
     los_lla = get_ssp(los_lla)
 
     return d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr
+
+### Obsolete functions, please use better alternatives:
+### julianDateToGMST => julianDateToGMST2
+
+def julianDateToGMST(jd, fr):
+    """
+    Converts Julian date (expressed at two floats) to GMST (Greenwich Mean Sidereal Time).
+
+    Parameters:
+    jd : float - Julian date full integer + 0.5
+    fr : float - fractional part of the Julian date
+
+    Returns
+    =======
+    A single floating point representing a GMST, expressed in degrees (0...359.99999).
+
+    This calculation takes into consideration the precession, but not nutation.
+
+    Source: https://www.cv.nrao.edu/~rfisher/Ephemerides/times.html#GMST
+    """
+    # Problem: this conversion is broken. It produces very different results than julianDateToGMST2
+
+    T0 = 2451545.0 # J2000, 2000-Jan-01 12h UT1 as Julian date
+
+    # First calculate number of days since J2000 (2000-Jan-01 12h UT1)
+    d = jd - T0
+    d = d + fr
+
+    # Now convert this to centuries. Don't ask me why.
+    T = d / 36525.0
+
+    # Calculate GMST (in seconds at UT1=0)
+    gmst = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T*T*T
+
+    # Let's truncate this and return the value in degrees.
+    # This is clearly broken.
+    gmst = gmst # / SIDEREAL_DAY_SECS * 2*pi
+    while (gmst > 2*pi):
+        gmst -= 2*pi
+
+    return gmst
+    #return (gmst % 24)*(15/3600.0)
