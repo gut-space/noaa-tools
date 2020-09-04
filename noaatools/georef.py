@@ -430,7 +430,7 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
         https://noaa-apt.mbernardi.com.ar/"""
 
     img = cv2.imread(imgfile)
-    height, width, _ = img.shape
+    height, _, _ = img.shape # ris is height, width, channels
 
     # Convert date as a string datetime. Make sure to use UTC rather than the default (local timezone)
     d1 = datetime.fromisoformat(aos_txt).replace(tzinfo=timezone.utc)
@@ -440,30 +440,24 @@ def georef_apt(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str,
     sat = Satrec.twoline2rv(tle1, tle2)
     jd, fr = jday(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
 
-    print("## AOS=%s" % d1)
+    print("## AOS=%s in Julian Date is %f" % (d1, jd+fr) )
 
     sat_positions = []
 
-    print("## There are %d lines in the %s file." % (height, imgfile))
+    print("## There are %d pixel rows in the %s file." % (height, imgfile))
     for i in range(0,height):
         _, pos, _ = sat.sgp4(jd, fr)
         gmst, _ = julianDateToGMST2(jd, fr)
         lla = teme2geodetic_oblate(pos[0], pos[1], pos[2], gmst, ellipsoid_wgs84)
         lla = (lla[0]*DEG2RAD, lla[1]*DEG2RAD, lla[2])
-        if i % 10 == 11:
-            print("## %d of %d: t=%s result=%s gmst=%f lon=%f lat=%f alt=%f" % (i, height, d1, pos, gmst, lla[0], lla[1], lla[2]))
-        # TODO: print timestamp
         sat_positions.append(lla) # degrees
-        fr = fr + 0.5/86400.0
+        fr = fr + 0.5/SIDEREAL_DAY_SECS # half a second for each line
 
-    rows = len(sat_positions)
     # print("## %d positions calculated" % rows)
     # print("## Sat position for row 0: %f, %f" % (sat_positions[0][0], sat_positions[0][1])) # degrees
     # print("## Sat position for row %d: %f, %f" % (rows, sat_positions[rows -1 ][0], sat_positions[rows - 1][1]))
 
     ref_az = calc_azimuth(sat_positions[0], sat_positions[-1])
-    if (ref_az < 0):
-        ref_az += 2*pi
 
     dist = distance_apt(sat_positions[0][0], sat_positions[0][1], sat_positions[-1][0], sat_positions[-1][1])
 
