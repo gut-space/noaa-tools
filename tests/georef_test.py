@@ -100,7 +100,7 @@ class Georefests(unittest.TestCase):
             if (abs(exp - act) > 0.000004):
                 print("Checking case for jd=%f expected=%f noaatools=%f (diff=%f)" % (case[0], exp, act, abs(exp - act)) )
                 self.assertAlmostEqual(exp, act)
-            print("JD=%f GMST=%f, GMST2=%f, delta=%f" % (case[0], act2, act, act-act2))
+            #print("JD=%f GMST=%f, GMST2=%f, delta=%f" % (case[0], act2, act, act-act2))
 
     def test_calc_distance_azimuth(self):
         # lat1, lon1, lat2, lon2 (all in degrees), expected distance in km
@@ -121,17 +121,8 @@ class Georefests(unittest.TestCase):
             az2 = float('nan')
             az1 = georef.azimuth_apt(c[0]*DEG2RAD, c[1]*DEG2RAD, c[2]*DEG2RAD, c[3]*DEG2RAD)*RAD2DEG
             az2 = georef.calc_azimuth([c[0]*DEG2RAD, c[1]*DEG2RAD], [c[2]*DEG2RAD, c[3]*DEG2RAD])
-            try:
-                az3 = georef.azimuth_apt(c[0], c[1], c[2], c[3])
-            except ValueError:
-                print("azimuth_apt failed for the following input: %s" % c)
-            try:
-                az4 = georef.calc_azimuth([c[0], c[1]], [c[2], c[3]])
-            except BadValue:
-                print("!!!! calc_azimuth failed for the following input: %s" % c)
 
-
-            print("%s az1=%f az2=%f\n" % (c, az1, az2))
+            print("[%f,%f] -> [%f,%f] az1=%f az2=%f" % (c[0], c[1], c[2], c[3], az1, az2))
 
     def test_longitude_trunc(self):
         self.assertAlmostEqual(georef.longitude_trunc(0), 0)

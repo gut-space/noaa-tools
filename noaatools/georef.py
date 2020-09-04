@@ -334,12 +334,12 @@ def teme2geodetic(method: Method, x: float, y: float, z: float, t: datetime):
     raise Exception("Invalid calculation method: %s" % method)
 
 def azimuth_apt(lat1, lon1, lat2, lon2):
-    """everythin in rad """
+    """ Calculates azimuth between (lat1,lon1) and (lat2, lon2) points. Azimuth in range 0,2pi, Everything in radians. """
     delta_lon = lon2 - lon1
 
     az = atan2(sin(delta_lon), cos(lat1)*tan(lat2) - sin(lat1)*cos(delta_lon) )
 
-    return az
+    return az % (pi*2)
 
 def latlon_to_rel_px(latlon, start_latlon, ref_az, xres, yres, yaw) -> (float, float):
     """
