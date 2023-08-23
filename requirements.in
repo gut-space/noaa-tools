@@ -1,11 +1,6 @@
 opencv-python
-matplotlib
 sgp4
-
 pymap3d
-
-tle-tools == 0.2.2
-
+tle-tools
 czml3
-
-poliastro == 0.14
+poliastro
