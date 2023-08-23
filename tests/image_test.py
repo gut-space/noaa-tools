@@ -8,7 +8,7 @@ class Georefests(unittest.TestCase):
     def setUp(self):
         self.get_test_data()
 
-    TEST_URL = "https://satnogs.klub.com.pl/data/ab802ca1-419f-418a-aeea-d99bb9c702aa-0-1c60fdf5-3f18-409d-9834-17f014c608c1_product.png"
+    TEST_URL = "https://svarog.space/data/ab802ca1-419f-418a-aeea-d99bb9c702aa-0-1c60fdf5-3f18-409d-9834-17f014c608c1_product.png"
     TEST_FILE = "tests/1276.png"
 
     def get_test_data(self):

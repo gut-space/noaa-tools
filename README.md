@@ -100,7 +100,7 @@ optional arguments:
 ```
 
 The tool will export data to files similar to the specified. When you specify 1276.png, the actual output files
-will be 1276.js and 1276.txt. By default this tool uses [satnogs observation 1276](https://satnogs.klub.com.pl/obs/1276)
+will be 1276.js and 1276.txt. By default this tool uses [Svarog observation 1276](https://svarog.space/obs/1276)
 as sample data. That way you can easily run it without any parameters to quickly see how it works:
 
 ```bash
