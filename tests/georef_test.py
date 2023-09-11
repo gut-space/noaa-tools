@@ -1,7 +1,6 @@
 from noaatools import georef
 from math import pi
 import unittest
-import pytest
 
 
 class Georefests(unittest.TestCase):
