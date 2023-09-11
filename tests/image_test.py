@@ -4,6 +4,7 @@ import pytest
 import os
 import subprocess
 
+
 class Georefests(unittest.TestCase):
     def setUp(self):
         self.get_test_data()
@@ -18,7 +19,7 @@ class Georefests(unittest.TestCase):
             print("File %s exists, skipping download." % self.TEST_FILE)
         except FileNotFoundError:
             print("Test data file %s missing, downloading..." % self.TEST_FILE)
-            args = [ "wget -nd %s -O %s" % (self.TEST_URL, self.TEST_FILE) ]
+            args = ["wget -nd %s -O %s" % (self.TEST_URL, self.TEST_FILE)]
             process = subprocess.run(args, capture_output=True, shell=True)
             if process.returncode != 0:
                 print("wget failed to download file. details:\n===STDOUT===")
@@ -39,9 +40,9 @@ class Georefests(unittest.TestCase):
             "write-left": True,
             "write-right": False,
             "denoise": False,
-            "georef": True # Georeference
+            "georef": True  # Georeference
         }
 
         process_img("tests/1276.png", params)
 
-        #self.assertIs()
+        # self.assertIs()

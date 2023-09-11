@@ -6,6 +6,7 @@ from poliastro.czml.extract_czml import CZMLExtractor
 from astropy import time
 from datetime import timezone, timedelta
 
+
 def cesium_preamble():
     code = """
     // Code generated with noaa-tools.
@@ -18,7 +19,8 @@ def cesium_preamble():
 
     return code
 
-def export2cesium_point(lla, name, color = "RED"):
+
+def export2cesium_point(lla, name, color="RED"):
     """
     Exports specified LLA coordinates to filename, using name as a label.
     """
@@ -35,6 +37,7 @@ def export2cesium_point(lla, name, color = "RED"):
     """ % (name, lla[0], lla[1], lla[1], lla[0], lla[2], name[0], color)
 
     return code
+
 
 def export2cesium_tle(tle1, tle2, satname, aos, los):
     """
@@ -61,7 +64,7 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
     extractor = CZMLExtractor(aos_astropy, los_astropy, sample_points)
     extractor.add_orbit(orb, path_show=True, path_width=3, path_color=[125, 80, 120, 255], label_text=satname)
 
-    txt =" var czml = [\n"
+    txt = " var czml = [\n"
     for i in extractor.packets:
         txt += repr(i)
         txt += ",\n"
@@ -73,18 +76,20 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
     # This is how it looks like:  "availability": "2020-04-12T09:01:03Z/2020-04-12T09:17:06Z",
     # This is how it SHOULD look: "availability": "2020-04-12T09:01:03/2020-04-12T09:17:06",
 
-    #txt = txt.replace("Z/", "/") # replace Z/ with /
-    #txt = txt.replace('Z"', '"') # replace Z" with "
+    # txt = txt.replace("Z/", "/") # replace Z/ with /
+    # txt = txt.replace('Z"', '"') # replace Z" with "
 
     txt += "var dataSourcePromise = viewer.dataSources.add(Cesium.CzmlDataSource.load(czml));"
 
     return txt
+
 
 def expand3d(pt):
     """ Expand specified point to be full LLA (latitude, longitude, altitude), even if only lon, lat was specified """
     if (len(pt) == 3):
         return pt
     return pt[0], pt[1], 0.0
+
 
 def export2cesium(outfile, satname, aos_ts, los_ts, aos_lla, los_lla,
                   corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, text):
@@ -103,7 +108,7 @@ def export2cesium(outfile, satname, aos_ts, los_ts, aos_lla, los_lla,
     tle2 - second line of TLE data
     """
 
-    txt =  cesium_preamble()
+    txt = cesium_preamble()
     txt += export2cesium_tle(tle1, tle2, satname, aos_ts, los_ts)
     txt += "\n\n"
 
