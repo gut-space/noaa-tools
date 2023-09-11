@@ -1,23 +1,20 @@
-# This script processes images received from NOAA satellites
+"""
+This script processes images received from NOAA satellites.
 
-from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84
-from noaatools import export_js
-import sys
+Useful links:
+- Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
+- Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
+"""
+
 from datetime import datetime, timezone, timedelta
-from math import atan, atan2, sqrt, pi, sin, cos, asin, acos, tan
+from math import atan2, sqrt, pi, sin, cos, asin, acos
 from typing import Tuple
 
-from sgp4.io import twoline2rv
-from sgp4.earth_gravity import wgs72, wgs84
 from sgp4.api import jday, Satrec
-
 import numpy as np
 from pymap3d import ecef
+from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84
 
-sys.path.append('.')
-
-# Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
-# Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
 
 
 def julianDateToGMST(jd, fr):
@@ -174,7 +171,7 @@ def teme2geodetic_oblate(x: float, y: float, z: float, t: datetime, ellipsoid: E
     # First, we need to do some basic calculations for Earth oblateness
     a = ellipsoid.a
     f = 1.0 / ellipsoid.finv
-    b = a * (1 - 1.0 / f)
+    # b = a * (1 - 1.0 / f)  # This is not used anywhere
     e2 = f * (2 - f)
 
     phii = 1  # This is the starting value for initial iteration
@@ -231,13 +228,14 @@ def teme2geodetic_pymap3d(x: float, y: float, z: float, t: datetime, ell=None):
 
 
 def get_ssp(lla):
+    """ Returns sub-satellite point in LLA format. This is a point on Earth surface directly below the satellite."""
     return [lla[0], lla[1], 0]
 
 
 def calc_azimuth(p1, p2):
     """ Calculates azimuth from point 1 to point 2.
     Point - an array 3 of floats (LLA)
-    Returns azimuth in degrees
+    Returns azimuth in degrees (0..360.0)
 
     Source: http://edwilliams.org/avform.htm#Crs
     """
@@ -252,9 +250,9 @@ def calc_azimuth(p1, p2):
     tc1 = acos((sin(lat2) - sin(lat1) * cos(d)) / (sin(d) * cos(lat1)))
 
     tc1 = atan2(sin(lon1 - lon2) * cos(lat2), cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lon1 - lon2))
-    if (tc1 < 0):
+    if tc1 < 0:
         tc1 += 2 * pi
-    if (tc1 > 2 * pi):
+    if tc1 > 2 * pi:
         tc1 -= 2 * pi
     return tc1 * RAD2DEG
 
@@ -277,8 +275,8 @@ def calc_swath(alt, nu):
     epsilon = acos(sin(nur) / sin(rho))
     lam = pi / 2 - nur - epsilon
     swath = RE * lam
-    print("calc_swath(alt=%f nu=%f/%f) => rho=%f/%f epsilon=%f/%f, lambda= %f/%f => swath=%f [km]" %
-          (alt, nu, nur, rho, rho * RAD2DEG, epsilon, epsilon * RAD2DEG, lam, lam * RAD2DEG, swath))
+    print(f"calc_swath(alt{alt} nu={nu}/{nur}) => rho={rho}/{rho * RAD2DEG} epsilon={epsilon}/{epsilon * RAD2DEG}, "
+          f"lambda= {lam}/{lam * RAD2DEG} => swath={swath}[km]")
 
     return swath
 
@@ -328,13 +326,14 @@ def azimuth_add(az, delta):
 
 
 def teme2geodetic(method: Method, x: float, y: float, z: float, t: datetime):
+    """ Converts TEME coordinates to geodetic, using specified method."""
     if method == Method.SPHERICAL:
         return teme2geodetic_spherical(x, y, z, t)
     if method == Method.OBLATE:
         return teme2geodetic_oblate(x, y, z, t, ellipsoid_wgs84)
     if method == Method.PYMAP3D:
         return teme2geodetic_pymap3d(x, y, z, t)
-    raise Exception("Invalid calculation method: %s" % method)
+    raise ValueError(f"Invalid calculation method: {method}")
 
 
 def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
@@ -346,8 +345,8 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     d1 = datetime.fromisoformat(aos_txt).replace(tzinfo=timezone.utc)
     d2 = datetime.fromisoformat(los_txt).replace(tzinfo=timezone.utc)
 
-    print("AOS time: %s" % d1)
-    print("LOS time: %s" % d2)
+    print(f"AOS time: {d1}")
+    print(f"LOS time: {d2}")
 
     # STEP 1: Calculate sat location at AOS and LOS
 
@@ -390,7 +389,7 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     aos_bis = teme2geodetic(method, pos1delta[0], pos1delta[1], pos1delta[2], d1delta)
     aos_az = calc_azimuth(aos_lla, aos_bis)
 
-    print("AOS converted to LLA is lat=%f long=%f alt=%f, azimuth=%f" % (aos_lla[0], aos_lla[1], aos_lla[2], aos_az))
+    print(f"AOS converted to LLA is lat={aos_lla[0]:f} long={aos_lla[1]:f} alt={aos_lla[2]:f}, azimuth={aos_az}")
 
     # Now do the same for LOS
     los_lla = teme2geodetic(method, pos2[0], pos2[1], pos2[2], d2)
@@ -400,7 +399,7 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     los_bis = teme2geodetic(method, pos2delta[0], pos2delta[1], pos2delta[2], d2delta)
     los_az = calc_azimuth(los_lla, los_bis)
 
-    print("LOS converted to LLA is lat=%f long=%f alt=%f azimuth=%f" % (los_lla[0], los_lla[1], los_lla[2], los_az))
+    print(f"LOS converted to LLA is lat={los_lla[0]:f} long={los_lla[1]:f} alt={los_lla[0]:f} azimuth={los_az}")
 
     # STEP 3: Find image corners. Here's an algorithm proposal:
     #
@@ -420,25 +419,25 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     #    https://www.fcc.gov/media/radio/find-terminal-coordinates
     #    https://stackoverflow.com/questions/877524/calculating-coordinates-given-a-bearing-and-a-distance
 
-    # TODO: Calculcate if this pass is northbound or southbound
+    # TODO: Calculate if this pass is northbound or southbound
 
     # Let's assume this is AVHRR instrument. Let's use its field of view angle.
     fov = AVHRR_FOV
 
     # Now calculate corner positions (use only the first method)
     swath = calc_swath(aos_lla[2], fov)
-    print("Instrument angle is %f deg, altitude is %f km, swath (each side) is %f km, total swath is %f km" % (fov, aos_lla[2], swath, swath * 2))
+    print(f"Instrument angle is {fov} deg, altitude is {aos_lla[2]} km, swath (each side) is {swath} km, total swath is {swath*2} km")
     corner_ul = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, +90), swath)
     corner_ur = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, -90), swath)
 
-    print("Upper left corner:  lat=%f lon=%f" % (corner_ul[0], corner_ul[1]))
-    print("Upper right corner: lat=%f lon=%f" % (corner_ur[0], corner_ur[1]))
+    print(f"Upper left corner:  lat=%{corner_ul[0]} lon={corner_ul[1]}")
+    print(f"Upper right corner: lat=%{corner_ur[0]} lon={corner_ur[1]}")
 
     # Now calculate corner positions (use only the first method)
     corner_ll = radial_distance(los_lla[0], los_lla[1], azimuth_add(los_az, +90), swath)
     corner_lr = radial_distance(los_lla[0], los_lla[1], azimuth_add(los_az, -90), swath)
-    print("Lower left corner:  lat=%f lon=%f" % (corner_ll[0], corner_ll[1]))
-    print("Lower right corner: lat=%f lon=%f" % (corner_lr[0], corner_lr[1]))
+    print(f"Lower left corner:  lat={corner_ll[0]} lon={corner_ll[1]}")
+    print(f"Lower right corner: lat={corner_lr[0]} lon={corner_lr[1]}")
 
     # Ok, we have the sat position in LLA format. Getting sub-satellite point is trivial. Just assume altitude is 0.
     aos_lla = get_ssp(aos_lla)

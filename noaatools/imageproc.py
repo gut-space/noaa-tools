@@ -1,6 +1,7 @@
+""" This module contains functions to process NOAA images, mainly drawing grid on them."""
+
 import cv2
-import sys
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 
 LEFT_BEGIN_COLUMN = 84
 LEFT_END_COLUMN = 993
@@ -40,7 +41,7 @@ def process_img(file: str, params):
 
     ok, error = checkimg(img)
     if not ok:
-        print("ERROR: %s" % error)
+        print(f"ERROR: {error}")
         return False
 
     # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -98,6 +99,7 @@ def process_img(file: str, params):
 
 
 def mark_left(img):
+    """ Marks left image with a red rectangle."""
     # width and number of channels are ignored.
     height, _, _ = img.shape
 
@@ -106,6 +108,7 @@ def mark_left(img):
 
 
 def mark_right(img):
+    """ Marks right image with a green rectangle."""
 
     height, _, _ = img.shape
     # These are some magic number. The right image starts at pixel 112 and ends on pixel 2033.
@@ -148,16 +151,19 @@ def show_img(img, title="image", wait=True):
 
 
 def extract_left(img):
+    """ Extracts left image from the full image."""
     _, height, _ = img.shape
     return img[0:height - 1, LEFT_BEGIN_COLUMN:LEFT_END_COLUMN]
 
 
 def extract_right(img):
+    """ Extracts right image from the full image."""
     _, height, _ = img.shape
     return img[0:height - 1, RIGHT_BEGIN_COLUMN:RIGHT_END_COLUMN]
 
 
 def checkimg(img):
+    """ do basic sanity check on the image and see if it looks like NOAA image."""
     height, width, _ = img.shape
     # Check if this looks like NOAA image at all.
 
