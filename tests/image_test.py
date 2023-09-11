@@ -1,6 +1,5 @@
 from noaatools.imageproc import process_img
 import unittest
-import pytest
 import os
 import subprocess
 
@@ -15,8 +14,8 @@ class Georefests(unittest.TestCase):
     def get_test_data(self):
         """This ensures the data file is here. We don't want to commit 3MB data to this repo."""
         try:
-            x = os.stat(self.TEST_FILE)
-            print("File %s exists, skipping download." % self.TEST_FILE)
+            os.stat(self.TEST_FILE)
+            print(f"File {self.TEST_FILE} exists, skipping download.")
         except FileNotFoundError:
             print("Test data file %s missing, downloading..." % self.TEST_FILE)
             args = ["wget -nd %s -O %s" % (self.TEST_URL, self.TEST_FILE)]

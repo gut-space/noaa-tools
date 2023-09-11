@@ -6,6 +6,7 @@ from tletools import TLE
 from poliastro.czml.extract_czml import CZMLExtractor
 from astropy import time
 
+
 def cesium_preamble():
     """ Generates Cesium preamble"""
     code = """

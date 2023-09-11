@@ -1,7 +1,7 @@
 """ This module contains functions to process NOAA images, mainly drawing grid on them."""
 
 import cv2
-#from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
 LEFT_BEGIN_COLUMN = 84
 LEFT_END_COLUMN = 993
@@ -57,28 +57,28 @@ def process_img(file: str, params):
         img = mark_left(img)
         img = mark_right(img)
 
-    l = extract_left(img)
-    r = extract_right(img)
+    left = extract_left(img)
+    right = extract_right(img)
 
     # show_img(img)
     if params['histogram']:
-        l = cv2.cvtColor(l, cv2.COLOR_BGR2GRAY)
-        r = cv2.cvtColor(r, cv2.COLOR_BGR2GRAY)
+        left = cv2.cvtColor(left, cv2.COLOR_BGR2GRAY)
+        right = cv2.cvtColor(right, cv2.COLOR_BGR2GRAY)
 
         if params['histogram-adaptive']:
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            l = clahe.apply(l)
-            r = clahe.apply(r)
+            left = clahe.apply(left)
+            right = clahe.apply(right)
         else:
-            l = cv2.equalizeHist(l)
-            r = cv2.equalizeHist(r)
+            left = cv2.equalizeHist(left)
+            right = cv2.equalizeHist(right)
 
     # Processing done. Let's display them
     if params['show']:
         if params['write-left']:
-            show_img(l, title="left", wait=False)
+            show_img(left, title="left", wait=False)
         if params['write-right']:
-            show_img(r, title="right", wait=False)
+            show_img(right, title="right", wait=False)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -90,10 +90,10 @@ def process_img(file: str, params):
         cv2.imwrite(fname + '-annot.png', img)
 
     if params['write-left']:
-        cv2.imwrite(fname + '-left.png', l)
+        cv2.imwrite(fname + '-left.png', left)
 
     if params['write-right']:
-        cv2.imwrite(fname + '-right.png', r)
+        cv2.imwrite(fname + '-right.png', right)
 
     return True
 

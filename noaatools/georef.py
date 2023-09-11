@@ -16,7 +16,6 @@ from pymap3d import ecef
 from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84
 
 
-
 def julianDateToGMST(jd, fr):
     """
     Converts Julian date (expressed at two floats) to GMST (Greenwich Mean Sidereal Time).
