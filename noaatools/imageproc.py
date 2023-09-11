@@ -82,6 +82,14 @@ def process_img(file: str, params):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+    process_img_write(file, params, img, left, right)
+
+    return True
+
+
+def process_img_write(file, params, img, left, right):
+    """ Writes output files."""
+
     # Time to write output files.
     fname = file.split('.')
     fname = '.'.join(fname[:-1])
@@ -94,8 +102,6 @@ def process_img(file: str, params):
 
     if params['write-right']:
         cv2.imwrite(fname + '-right.png', right)
-
-    return True
 
 
 def mark_left(img):
