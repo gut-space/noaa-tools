@@ -1,13 +1,13 @@
-# This file contains routines that export data to JavaScript using Cesium
-# The exported file can be easily tested on https://sandcastle.cesium.com
+""" This file contains routines that export data to JavaScript using Cesium
+    The exported file can be easily tested on https://sandcastle.cesium.com"""
 
+from datetime import timezone, timedelta
 from tletools import TLE
 from poliastro.czml.extract_czml import CZMLExtractor
 from astropy import time
-from datetime import timezone, timedelta
-
 
 def cesium_preamble():
+    """ Generates Cesium preamble"""
     code = """
     // Code generated with noaa-tools.
     // This can be executed using Cesium. The easiest way to test it is to go to
@@ -86,7 +86,7 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
 
 def expand3d(pt):
     """ Expand specified point to be full LLA (latitude, longitude, altitude), even if only lon, lat was specified """
-    if (len(pt) == 3):
+    if len(pt) == 3:
         return pt
     return pt[0], pt[1], 0.0
 
@@ -112,8 +112,8 @@ def export2cesium(outfile, satname, aos_ts, los_ts, aos_lla, los_lla,
     txt += export2cesium_tle(tle1, tle2, satname, aos_ts, los_ts)
     txt += "\n\n"
 
-    txt += export2cesium_point(aos_lla, "AOS(%s)" % text, "BLUE")
-    txt += export2cesium_point(los_lla, "LOS(%s)" % text, "YELLOW")
+    txt += export2cesium_point(aos_lla, f"AOS({text})", "BLUE")
+    txt += export2cesium_point(los_lla, f"LOS({text})", "YELLOW")
 
     # Export corners
     if corner_ul:
@@ -129,8 +129,8 @@ def export2cesium(outfile, satname, aos_ts, los_ts, aos_lla, los_lla,
         corner_lr = expand3d(corner_lr)
         txt += export2cesium_point(corner_lr, "Lower Right", "GREEN")
 
-    f = open(outfile, "w")
-    f.write(txt)
-    f.close()
+    with open(outfile, "w", encoding="utf-8") as f:
+        f.write(txt)
+        f.close()
 
-    print("Georeference data exported in JavaScript using Cesium format to %s" % outfile)
+    print(f"Georeference data exported in JavaScript using Cesium format to {outfile}")

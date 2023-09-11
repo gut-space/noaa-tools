@@ -1,3 +1,5 @@
+""" This module contains constants used in the noaatools package."""
+
 from enum import Enum
 from collections import namedtuple
 
@@ -9,6 +11,7 @@ RE = 6378.137  # Earth radius (in km)
 
 
 class Method(Enum):
+    """ Enumeration of georeferencing methods."""
     SPHERICAL = 1
     OBLATE = 2
     PYMAP3D = 3

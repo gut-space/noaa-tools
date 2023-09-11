@@ -3,8 +3,6 @@ from noaatools import export_csv
 from noaatools import export_js
 from noaatools import georef
 from datetime import timedelta
-import sys
-import os
 
 APP_NAME = "noaatools"
 
