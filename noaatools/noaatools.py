@@ -1,3 +1,8 @@
+import argparse
+from noaatools import export_csv
+from noaatools import export_js
+from noaatools import georef
+from datetime import timedelta
 import sys
 import os
 
@@ -24,15 +29,10 @@ USAGE = '''
 # los - loss of signal
 '''
 
-from datetime import timedelta
-from noaatools import georef
-from noaatools import export_js
-from noaatools import export_csv
-
-import argparse
 
 def usage():
     print(USAGE)
+
 
 def method2enum(str):
     if str == "SPHERICAL":
@@ -42,6 +42,7 @@ def method2enum(str):
     if str == "PYMAP3D":
         return georef.Method.PYMAP3D
     raise Exception("ERROR: Unable to understand %s, allowed values are SPHERICAL, OBLATE, PYMAP3D" % str)
+
 
 if __name__ == "__main__":
 
@@ -62,7 +63,11 @@ if __name__ == "__main__":
     parser.add_argument("--los", help="Specify Loss of signal as timestamp (default: %(default)s)", default=los, type=str)
     parser.add_argument("--tle1", help="First line of TLE (default: %(default)s)", default=tle1, type=str)
     parser.add_argument("--tle2", help="Second line of TLE (default: %(default)s)", default=tle2, type=str)
-    parser.add_argument("--method", help="Specify orbital position calculation method (SPHERICAL, OBLATE, PYMAP3D, default: %(default)s)", default=method, type=str)
+    parser.add_argument(
+        "--method",
+        help="Specify orbital position calculation method (SPHERICAL, OBLATE, PYMAP3D, default: %(default)s)",
+        default=method,
+        type=str)
     parser.add_argument("--satname", help="Specifies satellite name (default: %(default)s)", default=satname, type=str)
     parser.add_argument("--file", help="Specifies output file pattern (default: %(default)s)", default=imgname, type=str)
 
@@ -79,7 +84,7 @@ if __name__ == "__main__":
     d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr = georef.georef(method, tle1, tle2, aos, los)
 
     # Now export the data to Cesium JavaScript
-    outfile_js  = ".".join(imgname.split('.')[:-1]) + ".js"
+    outfile_js = ".".join(imgname.split('.')[:-1]) + ".js"
     outfile_csv = ".".join(imgname.split('.')[:-1]) + ".txt"
 
     # BUG: For some reason the mean anomaly calculated in CZML exporter is off by couple degrees that's roughly equivalent to 5 minutes time.
@@ -87,7 +92,6 @@ if __name__ == "__main__":
     delta = timedelta(minutes=5)
     d1_czml = d1 - delta
     d2_czml = d2 - delta
-
 
     export_js.export2cesium(outfile_js, satname, d1_czml, d2_czml, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, method.name)
     export_csv.export2csv(outfile_csv, satname, d1, d2, aos_lla, los_lla, corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, method.name)

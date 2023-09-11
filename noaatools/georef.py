@@ -1,5 +1,7 @@
 # This script processes images received from NOAA satellites
 
+from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84
+from noaatools import export_js
 import sys
 from datetime import datetime, timezone, timedelta
 from math import atan, atan2, sqrt, pi, sin, cos, asin, acos, tan
@@ -13,11 +15,10 @@ import numpy as np
 from pymap3d import ecef
 
 sys.path.append('.')
-from noaatools import export_js
-from noaatools.constants import DEG2RAD, RAD2DEG, Ellipsoid, Method, NOAA_PROCESSING_DELAY, RE, AVHRR_FOV, ellipsoid_wgs84
 
 # Nice conversions: https://github.com/skyfielders/python-skyfield/blob/master/skyfield/sgp4lib.py
 # Good explanation: https://stackoverflow.com/questions/8233401/how-do-i-convert-eci-coordinates-to-longitude-latitude-and-altitude-to-display-o
+
 
 def julianDateToGMST(jd, fr):
     """
@@ -35,7 +36,7 @@ def julianDateToGMST(jd, fr):
 
     Source: https://www.cv.nrao.edu/~rfisher/Ephemerides/times.html#GMST
     """
-    T0 = 2451545.0 # J2000, 2000-Jan-01 12h UT1 as Julian date
+    T0 = 2451545.0  # J2000, 2000-Jan-01 12h UT1 as Julian date
 
     # First calculate number of days since J2000 (2000-Jan-01 12h UT1)
     d = jd - T0
@@ -45,11 +46,12 @@ def julianDateToGMST(jd, fr):
     T = d / 36525.0
 
     # Calculate GMST (in seconds at UT1=0)
-    gmst = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T*T*T
+    gmst = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T * T * T
 
     # Let's truncate this and return the value in degrees.
     # This is clearly broken.
-    return (gmst % 24)*(15/3600.0)
+    return (gmst % 24) * (15 / 3600.0)
+
 
 def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
     """
@@ -80,7 +82,7 @@ def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
 
     _second = 1.0 / (24.0 * 60.0 * 60.0)
 
-    T0 = 2451545.0 # J2000, 2000-Jan-01 12h UT1 as Julian date
+    T0 = 2451545.0  # J2000, 2000-Jan-01 12h UT1 as Julian date
 
     # First calculate number of days since J2000 (2000-Jan-01 12h UT1)
     d = jd - T0
@@ -95,6 +97,7 @@ def julianDateToGMST2(jd: float, fr: float) -> Tuple[float, float]:
     theta = ((jd + fr) % 1.0 + g * _second % 1.0) * tau
     theta_dot = (1.0 + dg * _second / 36525.0) * tau
     return theta, theta_dot
+
 
 def longitude_trunc(lon: float) -> float:
     """
@@ -112,7 +115,8 @@ def longitude_trunc(lon: float) -> float:
     if (lon <= pi) and (lon >= -pi):
         # Don't do any conversion if it's not necessary. Avoid conversion errors if necessary
         return lon
-    return (lon + pi) % (2*pi) - pi
+    return (lon + pi) % (2 * pi) - pi
+
 
 def teme2geodetic_spherical(x: float, y: float, z: float, t: datetime):
     """
@@ -137,13 +141,14 @@ def teme2geodetic_spherical(x: float, y: float, z: float, t: datetime):
     jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
     gmst = julianDateToGMST2(jd, fr)[0]
 
-    lat = atan2(z, sqrt(x*x + y*y)) # phi
-    lon = atan2(y, x) - gmst # lambda-E
+    lat = atan2(z, sqrt(x * x + y * y))  # phi
+    lon = atan2(y, x) - gmst  # lambda-E
     lon = longitude_trunc(lon)
-    alt = sqrt(x*x + y*y + z*z) - RE # h
+    alt = sqrt(x * x + y * y + z * z) - RE  # h
 
     # TODO: convert this to radians and use radians everywhere.
-    return lat*RAD2DEG, lon*RAD2DEG, alt
+    return lat * RAD2DEG, lon * RAD2DEG, alt
+
 
 def teme2geodetic_oblate(x: float, y: float, z: float, t: datetime, ellipsoid: Ellipsoid):
     """
@@ -167,33 +172,34 @@ def teme2geodetic_oblate(x: float, y: float, z: float, t: datetime, ellipsoid: E
     """
 
     # First, we need to do some basic calculations for Earth oblateness
-    a  = ellipsoid.a
-    f  = 1.0/ellipsoid.finv
-    b  = a*(1 - 1.0/f)
-    e2 = f*(2-f)
+    a = ellipsoid.a
+    f = 1.0 / ellipsoid.finv
+    b = a * (1 - 1.0 / f)
+    e2 = f * (2 - f)
 
-    phii = 1 # This is the starting value for initial iteration
+    phii = 1  # This is the starting value for initial iteration
 
     # There should be a check on |phii - phi| value, but let's always do 5 iterations. Good enough for now.
-    for _ in range(1,5):
+    for _ in range(1, 5):
 
-        C = 1/(sqrt(1-e2*pow(sin(phii), 2)))
+        C = 1 / (sqrt(1 - e2 * pow(sin(phii), 2)))
         # This is not explicitly stated on clestrak page, but it's shown on a diagram.
-        R = sqrt(x*x + y*y)
-        phi = atan2(z + a*C*e2*sin(phii), R)
-        h= R/(cos(phi)) - a*C
+        R = sqrt(x * x + y * y)
+        phi = atan2(z + a * C * e2 * sin(phii), R)
+        h = R / (cos(phi)) - a * C
 
-        phii=phi
+        phii = phi
 
     jd, fr = jday(t.year, t.month, t.day, t.hour, t.minute, t.second)
     gmst = julianDateToGMST2(jd, fr)[0]
 
-    lon = atan2(y, x) - gmst # lambda-E
+    lon = atan2(y, x) - gmst  # lambda-E
     lon = longitude_trunc(lon)
 
-    return phi*RAD2DEG, lon*RAD2DEG, h
+    return phi * RAD2DEG, lon * RAD2DEG, h
 
-def teme2geodetic_pymap3d(x: float, y: float, z: float, t : datetime, ell = None):
+
+def teme2geodetic_pymap3d(x: float, y: float, z: float, t: datetime, ell=None):
     """
     Converts TEME/ECI coordinates to geodetic, using pymap3d library.
     For details, see https://github.com/geospace-code/pymap3d
@@ -211,21 +217,22 @@ def teme2geodetic_pymap3d(x: float, y: float, z: float, t : datetime, ell = None
     """
 
     # Short version - whole conversion in one go
-    #lat, lon, alt = ecef.eci2geodetic(x*1000, y*1000, z*1000, t)
-    #return lat, lon, alt/1000.0
+    # lat, lon, alt = ecef.eci2geodetic(x*1000, y*1000, z*1000, t)
+    # return lat, lon, alt/1000.0
 
-    #print("teme[x,y,z]=%f, %f, %f" % (x, y, z))
-    xecef, yecef, zecef = ecef.eci2ecef(np.array([x*1000]), np.array([y*1000]), np.array([z*1000]), t)
-    #print("ecef[x,y,z]=%f, %f, %f" % (xecef, yecef, zecef))
+    # print("teme[x,y,z]=%f, %f, %f" % (x, y, z))
+    xecef, yecef, zecef = ecef.eci2ecef(np.array([x * 1000]), np.array([y * 1000]), np.array([z * 1000]), t)
+    # print("ecef[x,y,z]=%f, %f, %f" % (xecef, yecef, zecef))
 
     # True = we want the response in degrees
     lat, lon, alt = ecef.ecef2geodetic(xecef, yecef, zecef, ell, True)
-    #print("lla = %f, %f, %f" % (lat, lon, alt))
-    return lat, lon, alt/1000.0
+    # print("lla = %f, %f, %f" % (lat, lon, alt))
+    return lat, lon, alt / 1000.0
 
 
 def get_ssp(lla):
-    return [ lla[0], lla[1], 0 ]
+    return [lla[0], lla[1], 0]
+
 
 def calc_azimuth(p1, p2):
     """ Calculates azimuth from point 1 to point 2.
@@ -240,23 +247,24 @@ def calc_azimuth(p1, p2):
     lat2 = p2[0] * DEG2RAD
     lon2 = -p2[1] * DEG2RAD
 
-    d = 2*asin(sqrt((sin((lat1-lat2)/2))**2 +  cos(lat1)*cos(lat2)*(sin((lon1-lon2)/2))**2))
+    d = 2 * asin(sqrt((sin((lat1 - lat2) / 2))**2 + cos(lat1) * cos(lat2) * (sin((lon1 - lon2) / 2))**2))
 
-    tc1 = acos((sin(lat2)-sin(lat1)*cos(d))/(sin(d)*cos(lat1)))
+    tc1 = acos((sin(lat2) - sin(lat1) * cos(d)) / (sin(d) * cos(lat1)))
 
-    tc1 = atan2(sin(lon1-lon2)*cos(lat2), cos(lat1)*sin(lat2)-sin(lat1)*cos(lat2)*cos(lon1-lon2))
+    tc1 = atan2(sin(lon1 - lon2) * cos(lat2), cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lon1 - lon2))
     if (tc1 < 0):
-        tc1 += 2*pi
-    if (tc1 > 2*pi):
-        tc1 -= 2*pi
-    return tc1*RAD2DEG
+        tc1 += 2 * pi
+    if (tc1 > 2 * pi):
+        tc1 -= 2 * pi
+    return tc1 * RAD2DEG
+
 
 def calc_swath(alt, nu):
     """This calculates the swath width, given the altitude (alt, in km) of the sat and camera angle (nu, in radians).
         Returns swath in km"""
 
     # Convert to radians first.
-    nur = nu*DEG2RAD
+    nur = nu * DEG2RAD
 
     # Ok, this is an overly simplified approximation. It neglects the Earth curvature.
     # return alt*tan(nu)
@@ -264,15 +272,16 @@ def calc_swath(alt, nu):
     # Source Wertz "Mission geometry", pg. 420.
 
     # rho is an angle between two lines: (sat - tangential to Earth) and (sat - Earth center)
-    rho = asin(RE/(RE+alt))
+    rho = asin(RE / (RE + alt))
 
-    epsilon = acos(sin(nur)/sin(rho))
-    lam = pi/2 - nur - epsilon
-    swath = RE*lam
+    epsilon = acos(sin(nur) / sin(rho))
+    lam = pi / 2 - nur - epsilon
+    swath = RE * lam
     print("calc_swath(alt=%f nu=%f/%f) => rho=%f/%f epsilon=%f/%f, lambda= %f/%f => swath=%f [km]" %
-    (alt, nu, nur, rho, rho*RAD2DEG, epsilon, epsilon*RAD2DEG, lam, lam*RAD2DEG, swath))
+          (alt, nu, nur, rho, rho * RAD2DEG, epsilon, epsilon * RAD2DEG, lam, lam * RAD2DEG, swath))
 
     return swath
+
 
 def radial_distance(lat1, lon1, bearing, distance):
     """
@@ -283,37 +292,40 @@ def radial_distance(lat1, lon1, bearing, distance):
     https://stackoverflow.com/questions/877524/calculating-coordinates-given-a-bearing-and-a-distance
     """
 
-    rlat1 = lat1*DEG2RAD
-    rlon1 = lon1*DEG2RAD
-    rdistance = distance / RE # normalize linear distance to radian angle
+    rlat1 = lat1 * DEG2RAD
+    rlon1 = lon1 * DEG2RAD
+    rdistance = distance / RE  # normalize linear distance to radian angle
     rbearing = bearing * DEG2RAD
 
-    rlat = asin( sin(rlat1) * cos(rdistance) + cos(rlat1) * sin(rdistance) * cos(rbearing) )
+    rlat = asin(sin(rlat1) * cos(rdistance) + cos(rlat1) * sin(rdistance) * cos(rbearing))
 
-    if cos(rlat) == 0 or abs(cos(rlat)) < 0.00000001: # Endpoint a pole
+    if cos(rlat) == 0 or abs(cos(rlat)) < 0.00000001:  # Endpoint a pole
         rlon = rlon1
     else:
-        rlon = ( (rlon1 + asin( sin(rbearing)* sin(rdistance) / cos(rlat) ) + pi ) % (2*pi) ) - pi
+        rlon = ((rlon1 + asin(sin(rbearing) * sin(rdistance) / cos(rlat)) + pi) % (2 * pi)) - pi
 
-    return (rlat*RAD2DEG, rlon*RAD2DEG)
+    return (rlat * RAD2DEG, rlon * RAD2DEG)
+
 
 def calc_distance(lat1, lon1, lat2, lon2):
     """
     Calculates distance between two (lat,lon) points. Return value is in km.
     """
-    rlat1 = lat1*DEG2RAD
-    rlon1 = lon1*DEG2RAD
-    rlat2 = lat2*DEG2RAD
-    rlon2 = lon2*DEG2RAD
+    rlat1 = lat1 * DEG2RAD
+    rlon1 = lon1 * DEG2RAD
+    rlat2 = lat2 * DEG2RAD
+    rlon2 = lon2 * DEG2RAD
 
-    d = 2 * asin(sqrt((sin((rlat1-rlat2)/2))**2 + cos(rlat1)*cos(rlat2)*(sin((rlon1-rlon2)/2))**2))
+    d = 2 * asin(sqrt((sin((rlat1 - rlat2) / 2))**2 + cos(rlat1) * cos(rlat2) * (sin((rlon1 - rlon2) / 2))**2))
 
     return d * RE
+
 
 def azimuth_add(az, delta):
     """ Adds delta to specified azimuth. Does the modulo 360 arithmetic"""
 
     return (az + delta) % 360.0
+
 
 def teme2geodetic(method: Method, x: float, y: float, z: float, t: datetime):
     if method == Method.SPHERICAL:
@@ -323,6 +335,7 @@ def teme2geodetic(method: Method, x: float, y: float, z: float, t: datetime):
     if method == Method.PYMAP3D:
         return teme2geodetic_pymap3d(x, y, z, t)
     raise Exception("Invalid calculation method: %s" % method)
+
 
 def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     """ This is a naive georeferencing method:
@@ -339,9 +352,9 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     # STEP 1: Calculate sat location at AOS and LOS
 
     # Old sgp4 API 1.x used this approach, which is not recommended anymore.
-    #sat_old = twoline2rv(tle1, tle2, wgs72)
-    #pos1_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
-    #pos2_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
+    # sat_old = twoline2rv(tle1, tle2, wgs72)
+    # pos1_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
+    # pos2_old, _ = sat_old.propagate(d1.year, d1.month, d1.day, d1.hour, d1.minute, d1.second)
 
     # This approach uses new API 2.x which gives a slightly different results.
     # In case of NOAA, the position is off by less than milimeter
@@ -351,17 +364,17 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
 
     # Take sat processing/transmission delay into consideration. At AOS time the signal received
     # was already NOAA_PROCESSING_DELAY seconds old.
-    fr1 -= NOAA_PROCESSING_DELAY/86400.0
-    fr2 -= NOAA_PROCESSING_DELAY/86400.0
+    fr1 -= NOAA_PROCESSING_DELAY / 86400.0
+    fr2 -= NOAA_PROCESSING_DELAY / 86400.0
 
-    _, pos1, _ = sat.sgp4(jd1, fr1) # returns error, position and velocity - we care about position only
+    _, pos1, _ = sat.sgp4(jd1, fr1)  # returns error, position and velocity - we care about position only
     _, pos2, _ = sat.sgp4(jd2, fr2)
 
     # Delta between a point and a point+delta (the second delta point is used to calculate azimuth)
     DELTA = 30.0
 
-    _, pos1delta, _ = sat.sgp4(jd1, fr1 + DELTA/86400.0)
-    _, pos2delta, _ = sat.sgp4(jd2, fr2 + DELTA/86400.0)
+    _, pos1delta, _ = sat.sgp4(jd1, fr1 + DELTA / 86400.0)
+    _, pos2delta, _ = sat.sgp4(jd2, fr2 + DELTA / 86400.0)
 
     # STEP 2: Calculate sub-satellite point at AOS, LOS times
     # T.S. Kelso saves the day *again*: see here: https://celestrak.com/columns/v02n03/
@@ -373,17 +386,17 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
     aos_lla = teme2geodetic(method, pos1[0], pos1[1], pos1[2], d1)
 
     # Now caluclate a position for AOS + 30s. Will use it to determine the azimuth
-    d1delta = d1 + timedelta(seconds = 30.0)
+    d1delta = d1 + timedelta(seconds=30.0)
     aos_bis = teme2geodetic(method, pos1delta[0], pos1delta[1], pos1delta[2], d1delta)
     aos_az = calc_azimuth(aos_lla, aos_bis)
 
-    print("AOS converted to LLA is lat=%f long=%f alt=%f, azimuth=%f" % (aos_lla[0], aos_lla[1], aos_lla[2], aos_az) )
+    print("AOS converted to LLA is lat=%f long=%f alt=%f, azimuth=%f" % (aos_lla[0], aos_lla[1], aos_lla[2], aos_az))
 
     # Now do the same for LOS
     los_lla = teme2geodetic(method, pos2[0], pos2[1], pos2[2], d2)
 
     # Let's use a point 30 seconds later. AOS and (AOS + 30s) will determine the azimuth
-    d2delta = d2 + timedelta(seconds = 30.0)
+    d2delta = d2 + timedelta(seconds=30.0)
     los_bis = teme2geodetic(method, pos2delta[0], pos2delta[1], pos2delta[2], d2delta)
     los_az = calc_azimuth(los_lla, los_bis)
 
@@ -414,7 +427,7 @@ def georef(method: Method, tle1: str, tle2: str, aos_txt: str, los_txt: str):
 
     # Now calculate corner positions (use only the first method)
     swath = calc_swath(aos_lla[2], fov)
-    print("Instrument angle is %f deg, altitude is %f km, swath (each side) is %f km, total swath is %f km" % (fov, aos_lla[2], swath, swath*2))
+    print("Instrument angle is %f deg, altitude is %f km, swath (each side) is %f km, total swath is %f km" % (fov, aos_lla[2], swath, swath * 2))
     corner_ul = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, +90), swath)
     corner_ur = radial_distance(aos_lla[0], aos_lla[1], azimuth_add(aos_az, -90), swath)
 

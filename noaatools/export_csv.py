@@ -6,16 +6,18 @@ def expand3d(pt):
         return pt
     return pt[0], pt[1], 0.0
 
+
 def to_text(name, lla, comment):
     lla = expand3d(lla)
     return "%s, %11.7f, %11.7f, %11.7f, %s" % (name, lla[0], lla[1], lla[2], comment)
 
+
 def export2csv(outfile, satname, aos_ts, los_ts, aos_lla, los_lla,
-                  corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, text):
+               corner_ul, corner_ur, corner_ll, corner_lr, tle1, tle2, text):
 
     f = open(outfile, "w")
 
-    txt =  "# Data generated using noaatools.\n"
+    txt = "# Data generated using noaatools.\n"
     txt += "# %s\n" % satname
     txt += "# TLE:\n"
     txt += "# %s\n" % tle1

@@ -8,6 +8,7 @@ LEFT_END_COLUMN = 993
 RIGHT_BEGIN_COLUMN = 1124
 RIGHT_END_COLUMN = 2033
 
+
 def process_img(file: str, params):
     """
     Processes PNG image received from NOAA sat.
@@ -42,7 +43,7 @@ def process_img(file: str, params):
         print("ERROR: %s" % error)
         return False
 
-    #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Denoising (gives poor results so far, need to tweak the parameters)
     if params['denoise']:
@@ -58,13 +59,13 @@ def process_img(file: str, params):
     l = extract_left(img)
     r = extract_right(img)
 
-    #show_img(img)
+    # show_img(img)
     if params['histogram']:
         l = cv2.cvtColor(l, cv2.COLOR_BGR2GRAY)
         r = cv2.cvtColor(r, cv2.COLOR_BGR2GRAY)
 
         if params['histogram-adaptive']:
-            clahe = cv2.createCLAHE(clipLimit = 2.0, tileGridSize=(8,8))
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
             l = clahe.apply(l)
             r = clahe.apply(r)
         else:
@@ -95,20 +96,23 @@ def process_img(file: str, params):
 
     return True
 
+
 def mark_left(img):
     # width and number of channels are ignored.
     height, _, _ = img.shape
 
     # These are some magic number. The left image starts at pixel 28 and ends on pixel 992.
-    return cv2.rectangle(img, (LEFT_BEGIN_COLUMN, 0), (LEFT_END_COLUMN - 1, height - 1), (255,0,0) )
+    return cv2.rectangle(img, (LEFT_BEGIN_COLUMN, 0), (LEFT_END_COLUMN - 1, height - 1), (255, 0, 0))
+
 
 def mark_right(img):
 
     height, _, _ = img.shape
     # These are some magic number. The right image starts at pixel 112 and ends on pixel 2033.
-    return cv2.rectangle(img, (RIGHT_BEGIN_COLUMN, 0), (RIGHT_END_COLUMN - 1, height - 1), (0,255,0))
+    return cv2.rectangle(img, (RIGHT_BEGIN_COLUMN, 0), (RIGHT_END_COLUMN - 1, height - 1), (0, 255, 0))
 
-def show2img(img1, img2, title1 = "before", title2 = "after"):
+
+def show2img(img1, img2, title1="before", title2="after"):
     """
     Shows two images, side by side.
 
@@ -122,7 +126,8 @@ def show2img(img1, img2, title1 = "before", title2 = "after"):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def show_img(img, title="image", wait = True):
+
+def show_img(img, title="image", wait=True):
     """
     Displays an image. Depending on the wait value, it returns immediately or waits for a key press.
     wait = False is useful when you want to display the first image of several.
@@ -134,20 +139,23 @@ def show_img(img, title="image", wait = True):
         cv2.waitKey(0)
 
     # The alternative is to use pyplot from mathplotlib
-    #plt.imshow(image, cmap = 'gray', interpolation = 'bicubic')
-    #Uncomment this to hide X, Y axis values
-    #plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+    # plt.imshow(image, cmap = 'gray', interpolation = 'bicubic')
+    # Uncomment this to hide X, Y axis values
+    # plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
 
-    #plt.plot([200,300,400],[200,200,300],'c', linewidth=5)
-    #plt.show()
+    # plt.plot([200,300,400],[200,200,300],'c', linewidth=5)
+    # plt.show()
+
 
 def extract_left(img):
     _, height, _ = img.shape
-    return img[0:height-1, LEFT_BEGIN_COLUMN:LEFT_END_COLUMN]
+    return img[0:height - 1, LEFT_BEGIN_COLUMN:LEFT_END_COLUMN]
+
 
 def extract_right(img):
     _, height, _ = img.shape
-    return img[0:height-1, RIGHT_BEGIN_COLUMN:RIGHT_END_COLUMN]
+    return img[0:height - 1, RIGHT_BEGIN_COLUMN:RIGHT_END_COLUMN]
+
 
 def checkimg(img):
     height, width, _ = img.shape
