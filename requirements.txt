@@ -18,7 +18,7 @@ attrs==23.1.0
     #   tle-tools
 beautifulsoup4==4.12.2
     # via astroquery
-certifi==2023.7.22
+certifi==2024.7.4
     # via requests
 cffi==1.15.1
     # via cryptography
