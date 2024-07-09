@@ -142,5 +142,5 @@ w3lib==2.1.2
     # via czml3
 webencodings==0.5.1
     # via html5lib
-zipp==3.16.2
+zipp==3.19.1
     # via importlib-metadata
