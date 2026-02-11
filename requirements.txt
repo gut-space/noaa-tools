@@ -20,13 +20,13 @@ beautifulsoup4==4.12.2
     # via astroquery
 certifi==2024.7.4
     # via requests
-cffi==1.15.1
+cffi==2.0.0
     # via cryptography
 charset-normalizer==3.2.0
     # via requests
 contourpy==1.1.0
     # via matplotlib
-cryptography==44.0.1
+cryptography==46.0.5
     # via secretstorage
 cycler==0.11.0
     # via matplotlib
@@ -134,6 +134,8 @@ tenacity==8.2.3
     # via plotly
 tle-tools==0.2.3
     # via -r requirements.in
+typing-extensions==4.15.0
+    # via cryptography
 tzdata==2023.3
     # via pandas
 urllib3==2.5.0
