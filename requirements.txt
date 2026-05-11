@@ -138,7 +138,7 @@ typing-extensions==4.15.0
     # via cryptography
 tzdata==2023.3
     # via pandas
-urllib3==2.6.3
+urllib3==2.7.0
     # via requests
 w3lib==2.1.2
     # via czml3
