@@ -2,9 +2,14 @@
     The exported file can be easily tested on https://sandcastle.cesium.com"""
 
 from datetime import timezone, timedelta
-from tletools import TLE
-from poliastro.czml.extract_czml import CZMLExtractor
-from astropy import time
+
+try:
+    from tletools import TLE
+    from poliastro.czml.extract_czml import CZMLExtractor
+    from astropy import time
+    _CESIUM_AVAILABLE = True
+except ImportError:
+    _CESIUM_AVAILABLE = False
 
 
 def cesium_preamble():
@@ -51,6 +56,9 @@ def export2cesium_tle(tle1, tle2, satname, aos, los):
     aos - Aquisition of Singal in Timedate format
     los - Loss of Signal in Timedate format
     """
+    if not _CESIUM_AVAILABLE:
+        raise ImportError("poliastro and tle-tools are required for CZML export but are not installed")
+
     tle = TLE.from_lines(satname, tle1, tle2)
     orb = tle.to_orbit()
 
