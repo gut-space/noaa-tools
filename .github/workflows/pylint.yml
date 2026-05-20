@@ -2,7 +2,7 @@ name: Pylint
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, 'claude/**' ]
   pull_request:
     branches: [ master ]
 
